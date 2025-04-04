@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { WebApp } from '@grammyjs/web-app'
 import './App.css';
 
@@ -139,6 +139,7 @@ function App() {
   const [answers, setAnswers] = useState<Record<string, any>>({})
   const [isReady, setIsReady] = useState(false)
   const [isTelegramWebApp, setIsTelegramWebApp] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     try {
@@ -278,35 +279,49 @@ function App() {
     setMessages([{ role: 'assistant', content: "Let's chat! What's on your mind?" }])
   }
 
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
   return (
     <div className={`app ${isTelegramWebApp ? 'telegram-webapp' : 'dev-environment'}`}>
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden">
+      <div className="content-area">
         {activeTab === 'coach' ? (
-          <div className="flex flex-col h-full">
+          <div className="h-full">
             {currentStep === 'initial' ? (
-              <div className="flex flex-col items-center justify-center h-full p-4 space-y-4">
-                <h1 className="text-2xl font-bold text-center">Welcome to UnbndAICoach! 🚀</h1>
-                <p className="text-center text-tg-theme-hint">I'm here to help you achieve your goals and transform your life.</p>
-                <div className="flex flex-col space-y-2 w-full max-w-sm">
-                  <button
-                    onClick={handleStartTest}
-                    className="w-full px-6 py-3 bg-tg-theme-button text-tg-theme-button-text rounded-lg font-medium"
-                  >
-                    Take a quick assessment
-                  </button>
-                  <button
-                    onClick={handleStartChat}
-                    className="w-full px-6 py-3 bg-tg-theme-secondary-bg text-tg-theme-text rounded-lg font-medium"
-                  >
-                    Start chatting right away
-                  </button>
+              <div className="welcome-screen">
+                <div className="rating-card">
+                  <div className="rating-info">
+                    <div className="avatar">AI</div>
+                    <div className="rating-details">
+                      <h4>Your Coach</h4>
+                      <div className="rating-points">Ready to help</div>
+                    </div>
+                  </div>
                 </div>
+                <h1>Welcome to UnbndAICoach! 🚀</h1>
+                <p>I'm here to help you achieve your goals and transform your life through personalized coaching.</p>
+                <button
+                  onClick={handleStartTest}
+                  className="primary-button"
+                >
+                  Take a quick assessment
+                </button>
+                <button
+                  onClick={handleStartChat}
+                  className="primary-button"
+                  style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}
+                >
+                  Start chatting right away
+                </button>
               </div>
             ) : (
               <>
-                {/* Messages Container */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="messages-container">
                   {messages.map((message, index) => (
                     <div key={index} className={`message ${message.role}`}>
                       {message.content}
@@ -314,78 +329,124 @@ function App() {
                   ))}
                   {isLoading && (
                     <div className="message assistant">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-tg-theme-text rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                        <div className="w-2 h-2 bg-tg-theme-text rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                        <div className="w-2 h-2 bg-tg-theme-text rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <div className="loading-dots">
+                        <div className="dot"></div>
+                        <div className="dot"></div>
+                        <div className="dot"></div>
                       </div>
                     </div>
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
-
-                {/* Input Form */}
-                <form onSubmit={handleSubmit} className="p-4 border-t border-tg-theme-hint/20">
-                  <div className="flex space-x-2">
+                <div className="input-area">
+                  <form onSubmit={handleSubmit} className="input-form">
                     <input
                       type="text"
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       placeholder={currentStep === 'test' ? "Type your answer..." : "Type your message..."}
-                      className="flex-1 px-4 py-2 rounded-lg bg-tg-theme-secondary-bg text-tg-theme-text placeholder-tg-theme-hint focus:outline-none focus:ring-2 focus:ring-tg-theme-button"
+                      className="input-field"
+                      autoComplete="off"
                     />
                     <button
                       type="submit"
                       disabled={isLoading || !input.trim()}
-                      className="px-6 py-2 bg-tg-theme-button text-tg-theme-button-text rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="send-button"
                     >
                       Send
                     </button>
-                  </div>
-                </form>
+                  </form>
+                </div>
               </>
             )}
           </div>
         ) : activeTab === 'dashboard' ? (
-          <div className="p-4">
-            <h2 className="text-lg font-medium mb-4">Dashboard</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="dashboard-card">
-                <h3 className="font-medium mb-2">Mood Tracking</h3>
-                <p className="text-tg-theme-hint">Track your daily mood and emotions</p>
+          <div>
+            <div className="rating-card">
+              <div className="rating-info">
+                <div className="avatar">👤</div>
+                <div className="rating-details">
+                  <h4>Your Progress</h4>
+                  <div className="rating-points">44,347 Points</div>
+                </div>
               </div>
-              <div className="dashboard-card">
-                <h3 className="font-medium mb-2">Goals</h3>
-                <p className="text-tg-theme-hint">Set and track your personal goals</p>
+              <div className="rating-rank">#20,777</div>
+            </div>
+            <div className="grid">
+              <div className="card">
+                <h3>Mood Tracking</h3>
+                <p>Track your daily mood and emotions</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-2xl">😊</span>
+                  <button className="primary-button" style={{ margin: 0, width: 'auto', padding: '0.5rem 1rem' }}>
+                    Log Mood
+                  </button>
+                </div>
               </div>
-              <div className="dashboard-card">
-                <h3 className="font-medium mb-2">Progress</h3>
-                <p className="text-tg-theme-hint">View your progress over time</p>
+              <div className="card">
+                <h3>Goals</h3>
+                <p>Your active goals and progress</p>
+                <div className="h-2 bg-tg-theme-button/20 rounded-full overflow-hidden">
+                  <div className="h-full w-3/4 bg-tg-theme-button rounded-full"></div>
+                </div>
               </div>
-              <div className="dashboard-card">
-                <h3 className="font-medium mb-2">Insights</h3>
-                <p className="text-tg-theme-hint">Get personalized insights</p>
+              <div className="card">
+                <h3>Insights</h3>
+                <p>Weekly performance analysis</p>
+                <div className="flex gap-1 mt-2">
+                  {['Focus', 'Energy', 'Growth'].map((tag, i) => (
+                    <span
+                      key={i}
+                      className="px-2 py-1 text-xs bg-tg-theme-button/10 text-tg-theme-button rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="card">
+                <h3>Streaks</h3>
+                <p>Consistency tracking</p>
+                <div className="flex justify-between items-end h-8 mt-2">
+                  {[0.3, 0.5, 0.4, 0.6, 0.8, 0.7, 0.9].map((height, i) => (
+                    <div
+                      key={i}
+                      className="w-3 bg-tg-theme-button rounded-t"
+                      style={{ height: `${height * 100}%` }}
+                    ></div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         ) : activeTab === 'tests' ? (
-          <div className="p-4">
-            <h2 className="text-lg font-medium mb-4">Psychological Tests</h2>
+          <div>
+            <div className="rating-card">
+              <div className="rating-info">
+                <div className="avatar">📝</div>
+                <div className="rating-details">
+                  <h4>Assessment Center</h4>
+                  <div className="rating-points">2 tests available</div>
+                </div>
+              </div>
+            </div>
             <div className="space-y-4">
-              <div className="test-card">
-                <h3 className="font-medium mb-2">Life Assessment</h3>
-                <p className="text-tg-theme-hint mb-2">10-question assessment to understand your current state</p>
+              <div className="card">
+                <h3>Life Assessment</h3>
+                <p>10-question assessment to understand your current state</p>
                 <button 
                   onClick={handleStartTest}
-                  className="w-full px-4 py-2 bg-tg-theme-button text-tg-theme-button-text rounded-lg font-medium"
+                  className="primary-button"
                 >
                   Start Assessment
                 </button>
               </div>
-              <div className="test-card">
-                <h3 className="font-medium mb-2">Personality Profile</h3>
-                <p className="text-tg-theme-hint mb-2">Discover your personality type and strengths</p>
+              <div className="card">
+                <h3>Personality Profile</h3>
+                <p>Discover your personality type and strengths</p>
                 <button 
-                  className="w-full px-4 py-2 bg-tg-theme-button text-tg-theme-button-text rounded-lg font-medium opacity-50 cursor-not-allowed"
+                  className="primary-button"
+                  style={{ backgroundColor: 'var(--tg-theme-secondary-bg-color)' }}
                   disabled
                 >
                   Coming Soon
@@ -394,56 +455,92 @@ function App() {
             </div>
           </div>
         ) : (
-          <div className="p-4">
-            <h2 className="text-lg font-medium mb-4">Profile</h2>
+          <div>
+            <div className="rating-card">
+              <div className="rating-info">
+                <div className="avatar">👤</div>
+                <div className="rating-details">
+                  <h4>Your Profile</h4>
+                  <div className="rating-points">Premium Member</div>
+                </div>
+              </div>
+            </div>
             <div className="space-y-4">
-              <div className="profile-section">
-                <h3 className="font-medium mb-2">Personal Information</h3>
-                <p className="text-tg-theme-hint">Update your profile information</p>
+              <div className="card">
+                <h3>Assessment Results</h3>
+                <div className="space-y-3 mt-2">
+                  <div className="flex justify-between items-center">
+                    <span>Life Satisfaction</span>
+                    <div className="w-32 h-2 bg-tg-theme-button/20 rounded-full overflow-hidden">
+                      <div className="h-full w-3/5 bg-tg-theme-button rounded-full"></div>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Energy Level</span>
+                    <div className="w-32 h-2 bg-tg-theme-button/20 rounded-full overflow-hidden">
+                      <div className="h-full w-4/5 bg-tg-theme-button rounded-full"></div>
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>Goal Progress</span>
+                    <div className="w-32 h-2 bg-tg-theme-button/20 rounded-full overflow-hidden">
+                      <div className="h-full w-2/3 bg-tg-theme-button rounded-full"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <div className="profile-section">
-                <h3 className="font-medium mb-2">Preferences</h3>
-                <p className="text-tg-theme-hint">Customize your coaching experience</p>
-              </div>
-              <div className="profile-section">
-                <h3 className="font-medium mb-2">Assessment Results</h3>
-                <p className="text-tg-theme-hint">View your assessment results and insights</p>
+              <div className="card">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center py-2 border-b border-tg-theme-hint/10">
+                    <span>Language</span>
+                    <span className="text-tg-theme-hint">English</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-tg-theme-hint/10">
+                    <span>Coaching Style</span>
+                    <span className="text-tg-theme-hint">Direct</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2">
+                    <span>Notifications</span>
+                    <span className="text-tg-theme-hint">On</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* Bottom Tab Navigation */}
-      <div className="flex border-t border-tg-theme-hint/20">
-        <button
-          className={`tab-button ${activeTab === 'coach' ? 'active' : ''}`}
-          onClick={() => setActiveTab('coach')}
-        >
-          <span className="tab-icon">💬</span>
-          <span className="tab-label">Coach</span>
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
-          onClick={() => setActiveTab('dashboard')}
-        >
-          <span className="tab-icon">📊</span>
-          <span className="tab-label">Dashboard</span>
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'tests' ? 'active' : ''}`}
-          onClick={() => setActiveTab('tests')}
-        >
-          <span className="tab-icon">📝</span>
-          <span className="tab-label">Tests</span>
-        </button>
-        <button
-          className={`tab-button ${activeTab === 'profile' ? 'active' : ''}`}
-          onClick={() => setActiveTab('profile')}
-        >
-          <span className="tab-icon">👤</span>
-          <span className="tab-label">Profile</span>
-        </button>
+      <div className="bottom-nav">
+        <div className="bottom-nav-content">
+          <button
+            className={`tab-button ${activeTab === 'coach' ? 'active' : ''}`}
+            onClick={() => setActiveTab('coach')}
+          >
+            <span className="tab-icon">💬</span>
+            <span className="tab-label">Coach</span>
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={() => setActiveTab('dashboard')}
+          >
+            <span className="tab-icon">📊</span>
+            <span className="tab-label">Dashboard</span>
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'tests' ? 'active' : ''}`}
+            onClick={() => setActiveTab('tests')}
+          >
+            <span className="tab-icon">📝</span>
+            <span className="tab-label">Tests</span>
+          </button>
+          <button
+            className={`tab-button ${activeTab === 'profile' ? 'active' : ''}`}
+            onClick={() => setActiveTab('profile')}
+          >
+            <span className="tab-icon">👤</span>
+            <span className="tab-label">Profile</span>
+          </button>
+        </div>
       </div>
     </div>
   )
