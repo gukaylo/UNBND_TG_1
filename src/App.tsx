@@ -4,15 +4,12 @@ import './App.css';
 
 declare global {
   interface Window {
-    Telegram: {
-      WebApp: WebApp & {
-        backgroundColor: string;
-        textColor: string;
-        hintColor: string;
-        linkColor: string;
-        buttonColor: string;
-        buttonTextColor: string;
-        secondaryBackgroundColor: string;
+    Telegram?: {
+      WebApp: {
+        ready: () => void
+        expand: () => void
+        enableClosingConfirmation: () => void
+        setBackgroundColor: (color: string) => void
       }
     }
   }
@@ -142,40 +139,39 @@ function App() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    // Initialize Telegram Web App
     try {
-      // Check if we're in Telegram Web App environment
-      const isTelegram = window.Telegram?.WebApp
-      setIsTelegramWebApp(!!isTelegram)
-
-      if (isTelegram) {
-        const tg = window.Telegram.WebApp
-        tg.ready()
-        tg.expand()
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.ready()
+        setIsTelegramWebApp(true)
         
-        // Set the app's theme colors
-        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.backgroundColor)
-        document.documentElement.style.setProperty('--tg-theme-text-color', tg.textColor || '#000000')
-        document.documentElement.style.setProperty('--tg-theme-hint-color', tg.hintColor || '#999999')
-        document.documentElement.style.setProperty('--tg-theme-link-color', tg.linkColor || '#2481cc')
-        document.documentElement.style.setProperty('--tg-theme-button-color', tg.buttonColor || '#2481cc')
-        document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.buttonTextColor || '#ffffff')
-        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.secondaryBackgroundColor || '#f0f0f0')
+        // Set the background color
+        window.Telegram.WebApp.setBackgroundColor('#000000')
+        
+        // Expand the Web App to full height
+        window.Telegram.WebApp.expand()
+
+        // Enable closing confirmation if needed
+        window.Telegram.WebApp.enableClosingConfirmation()
+
+        setIsReady(true)
+      } else {
+        console.log('Telegram WebApp not available, running in standalone mode')
+        setIsReady(true)
       }
-      
-      setIsReady(true)
     } catch (error) {
-      console.error('Error initializing Telegram WebApp:', error)
-      // Still set ready to true to allow app to work in browser
+      console.error('Error initializing Telegram Web App:', error)
       setIsReady(true)
     }
   }, [])
 
   if (!isReady) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tg-theme-button-color mx-auto mb-4"></div>
-          <p className="text-tg-theme-hint-color">Loading...</p>
+      <div className="loading-screen">
+        <div className="loading-dots">
+          <div className="dot"></div>
+          <div className="dot"></div>
+          <div className="dot"></div>
         </div>
       </div>
     )
