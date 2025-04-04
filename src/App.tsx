@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { WebApp } from '@grammyjs/web-app'
-import './App.css';
+import './App.css'
 
 declare global {
   interface Window {
@@ -10,6 +9,17 @@ declare global {
         expand: () => void
         enableClosingConfirmation: () => void
         setBackgroundColor: (color: string) => void
+        backgroundColor: string
+        headerColor: string
+        themeParams: {
+          bg_color: string
+          text_color: string
+          hint_color: string
+          link_color: string
+          button_color: string
+          button_text_color: string
+          secondary_bg_color: string
+        }
       }
     }
   }
@@ -139,31 +149,41 @@ function App() {
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Initialize Telegram Web App
-    try {
-      if (window.Telegram?.WebApp) {
-        window.Telegram.WebApp.ready()
-        setIsTelegramWebApp(true)
-        
-        // Set the background color
-        window.Telegram.WebApp.setBackgroundColor('#000000')
-        
-        // Expand the Web App to full height
-        window.Telegram.WebApp.expand()
+    const initTelegramApp = () => {
+      try {
+        if (window.Telegram?.WebApp) {
+          const webapp = window.Telegram.WebApp;
+          
+          // Initialize theme colors from Telegram theme
+          const root = document.documentElement;
+          const theme = webapp.themeParams;
+          
+          root.style.setProperty('--tg-theme-bg-color', theme.bg_color);
+          root.style.setProperty('--tg-theme-text-color', theme.text_color);
+          root.style.setProperty('--tg-theme-hint-color', theme.hint_color);
+          root.style.setProperty('--tg-theme-link-color', theme.link_color);
+          root.style.setProperty('--tg-theme-button-color', theme.button_color);
+          root.style.setProperty('--tg-theme-button-text-color', theme.button_text_color);
+          root.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color);
 
-        // Enable closing confirmation if needed
-        window.Telegram.WebApp.enableClosingConfirmation()
-
-        setIsReady(true)
-      } else {
-        console.log('Telegram WebApp not available, running in standalone mode')
-        setIsReady(true)
+          // Set background and expand the app
+          webapp.expand();
+          webapp.ready();
+          
+          setIsTelegramWebApp(true);
+        } else {
+          console.log('Running in standalone mode');
+        }
+      } catch (error) {
+        console.error('Error initializing Telegram Web App:', error);
+      } finally {
+        setIsReady(true);
       }
-    } catch (error) {
-      console.error('Error initializing Telegram Web App:', error)
-      setIsReady(true)
-    }
-  }, [])
+    };
+
+    // Initialize immediately
+    initTelegramApp();
+  }, []);
 
   if (!isReady) {
     return (
@@ -174,7 +194,7 @@ function App() {
           <div className="dot"></div>
         </div>
       </div>
-    )
+    );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
