@@ -1,9 +1,36 @@
-import { useEffect, useState } from 'react';
-import { useWebApp } from '@vkruglikov/react-telegram-web-app';
+import { useState, useEffect } from 'react'
+import { WebApp } from '@grammyjs/web-app'
 import './App.css';
 
+declare global {
+  interface Window {
+    Telegram: {
+      WebApp: WebApp & {
+        backgroundColor: string;
+        textColor: string;
+        hintColor: string;
+        linkColor: string;
+        buttonColor: string;
+        buttonTextColor: string;
+        secondaryBackgroundColor: string;
+      }
+    }
+  }
+}
+
+interface Message {
+  role: 'user' | 'assistant'
+  content: string
+}
+
+interface TestQuestion {
+  question: string
+  field: string
+  options?: Record<string, string>
+}
+
 // Base test questions
-const baseTest = [
+const baseTest: TestQuestion[] = [
   {
     question: "On a scale of 1-10, how satisfied are you with your life right now?",
     field: "lifeSatisfaction"
@@ -19,57 +46,154 @@ const baseTest = [
       "e": "focus"
     }
   },
-  // ... add all other questions
+  {
+    question: "How would you describe your current mindset?\na) Stuck\nb) Don't know what I want\nc) Making progress\nd) Lost/overwhelmed",
+    field: "currentMindset",
+    options: {
+      "a": "stuck",
+      "b": "unsure",
+      "c": "progress",
+      "d": "lost"
+    }
+  },
+  {
+    question: "What's your energy level like?\na) Low\nb) Scattered\nc) Productive\nd) High/focused",
+    field: "energyLevel",
+    options: {
+      "a": "low",
+      "b": "scattered",
+      "c": "productive",
+      "d": "high"
+    }
+  },
+  {
+    question: "What's your biggest internal blocker?\na) Fear/doubt\nb) Procrastination\nc) Overthinking\nd) Lack of clarity\ne) Emotional overwhelm",
+    field: "internalBlocker",
+    options: {
+      "a": "fear",
+      "b": "procrastination",
+      "c": "overthinking",
+      "d": "clarity",
+      "e": "emotional"
+    }
+  },
+  {
+    question: "How do you follow through with habits?\na) Plan but don't act\nb) Start but don't finish\nc) Only when motivated\nd) Consistent",
+    field: "followThroughHabits",
+    options: {
+      "a": "planner",
+      "b": "starter",
+      "c": "motivated",
+      "d": "consistent"
+    }
+  },
+  {
+    question: "What support style works best for you?\na) Push me\nb) Encourage me\nc) Ask questions\nd) Give structure",
+    field: "preferredSupportStyle",
+    options: {
+      "a": "push",
+      "b": "encourage",
+      "c": "questions",
+      "d": "structure"
+    }
+  },
+  {
+    question: "How do you make decisions?\na) Logic\nb) Emotion\nc) Overthink\nd) Gut",
+    field: "decisionStyle",
+    options: {
+      "a": "logic",
+      "b": "emotions",
+      "c": "overthink",
+      "d": "gut"
+    }
+  },
+  {
+    question: "What's your self-talk like when you fail?\na) Hard on self\nb) Shut down\nc) Problem-solve\nd) Bounce back",
+    field: "selfTalkInFailure",
+    options: {
+      "a": "critical",
+      "b": "shutdown",
+      "c": "solver",
+      "d": "resilient"
+    }
+  },
+  {
+    question: "How ready are you for change?\na) Small shifts\nb) Bold moves\nc) Habit upgrades\nd) Deep mindset",
+    field: "changeReadiness",
+    options: {
+      "a": "small",
+      "b": "bold",
+      "c": "habits",
+      "d": "deep"
+    }
+  }
 ];
 
 function App() {
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant', content: string }>>([]);
-  const [currentMessage, setCurrentMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<'initial' | 'test' | 'chat'>('initial');
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, any>>({});
-  const webApp = useWebApp();
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState<'coach' | 'dashboard' | 'tests' | 'profile'>('coach')
+  const [currentStep, setCurrentStep] = useState<'initial' | 'test' | 'chat'>('initial')
+  const [currentQuestion, setCurrentQuestion] = useState(0)
+  const [answers, setAnswers] = useState<Record<string, any>>({})
+  const [isReady, setIsReady] = useState(false)
+  const [isTelegramWebApp, setIsTelegramWebApp] = useState(false)
 
   useEffect(() => {
-    // Initialize Telegram Web App
-    webApp.ready();
-    webApp.expand();
+    try {
+      // Check if we're in Telegram Web App environment
+      const isTelegram = window.Telegram?.WebApp
+      setIsTelegramWebApp(!!isTelegram)
 
-    // Set theme
-    document.body.style.backgroundColor = webApp.backgroundColor;
-    document.body.style.color = webApp.textColor;
-  }, [webApp]);
-
-  const handleStartTest = () => {
-    setCurrentStep('test');
-    setMessages([{ role: 'assistant', content: baseTest[0].question }]);
-  };
-
-  const handleStartChat = () => {
-    setCurrentStep('chat');
-    setMessages([{ role: 'assistant', content: "Let's chat! What's on your mind?" }]);
-  };
-
-  const handleAnswer = async (answer: string) => {
-    if (currentStep === 'test') {
-      const newAnswers = { ...answers };
-      newAnswers[baseTest[currentQuestion].field] = answer;
-      setAnswers(newAnswers);
-
-      if (currentQuestion < baseTest.length - 1) {
-        setCurrentQuestion(currentQuestion + 1);
-        setMessages([...messages, { role: 'user', content: answer }, { role: 'assistant', content: baseTest[currentQuestion + 1].question }]);
-      } else {
-        setCurrentStep('chat');
-        setMessages([...messages, { role: 'user', content: answer }, { role: 'assistant', content: "Great! I now have a better understanding of your needs. Let's start our conversation!" }]);
+      if (isTelegram) {
+        const tg = window.Telegram.WebApp
+        tg.ready()
+        tg.expand()
+        
+        // Set the app's theme colors
+        document.documentElement.style.setProperty('--tg-theme-bg-color', tg.backgroundColor)
+        document.documentElement.style.setProperty('--tg-theme-text-color', tg.textColor || '#000000')
+        document.documentElement.style.setProperty('--tg-theme-hint-color', tg.hintColor || '#999999')
+        document.documentElement.style.setProperty('--tg-theme-link-color', tg.linkColor || '#2481cc')
+        document.documentElement.style.setProperty('--tg-theme-button-color', tg.buttonColor || '#2481cc')
+        document.documentElement.style.setProperty('--tg-theme-button-text-color', tg.buttonTextColor || '#ffffff')
+        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', tg.secondaryBackgroundColor || '#f0f0f0')
       }
-    } else {
-      setMessages([...messages, { role: 'user', content: answer }]);
-      setIsLoading(true);
+      
+      setIsReady(true)
+    } catch (error) {
+      console.error('Error initializing Telegram WebApp:', error)
+      // Still set ready to true to allow app to work in browser
+      setIsReady(true)
+    }
+  }, [])
 
+  if (!isReady) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-tg-theme-button-color mx-auto mb-4"></div>
+          <p className="text-tg-theme-hint-color">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!input.trim() || isLoading) return
+
+    const userMessage: Message = { role: 'user', content: input.trim() }
+    setMessages(prev => [...prev, userMessage])
+    setInput('')
+    setIsLoading(true)
+
+    if (currentStep === 'test') {
+      handleTestAnswer(userMessage.content)
+    } else {
       try {
-        const response = await fetch('http://localhost:3001/api/chat', {
+        const response = await fetch('https://unbd.onrender.com/api/chat', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -80,67 +204,249 @@ function App() {
                 role: "system",
                 content: createSystemPrompt(answers)
               },
-              ...messages.map(m => ({ role: m.role, content: m.content })),
-              { role: "user", content: answer }
+              ...messages.map(msg => ({
+                role: msg.role,
+                content: msg.content
+              })),
+              { role: "user", content: userMessage.content }
             ]
           }),
-        });
+        })
 
         if (!response.ok) {
-          throw new Error('Failed to get response');
+          throw new Error('Network response was not ok')
         }
 
-        const data = await response.json();
-        setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
+        const data = await response.json()
+        setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
       } catch (error) {
-        console.error('Error:', error);
-        setMessages(prev => [...prev, { role: 'assistant', content: "I'm having trouble connecting. Please try again." }]);
+        console.error('Error:', error)
+        setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, there was an error processing your request.' }])
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
     }
-  };
+  }
 
-  const handleSend = () => {
-    if (currentMessage.trim()) {
-      handleAnswer(currentMessage.trim());
-      setCurrentMessage('');
+  const handleTestAnswer = (answer: string) => {
+    const newAnswers = { ...answers }
+    const currentQ = baseTest[currentQuestion]
+    
+    if (currentQ.options) {
+      const option = answer.toLowerCase().trim()
+      if (option in currentQ.options) {
+        newAnswers[currentQ.field] = currentQ.options[option as keyof typeof currentQ.options]
+      } else {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: 'Please select a valid option (a, b, c, d, or e).' 
+        }])
+        setIsLoading(false)
+        return
+      }
+    } else {
+      newAnswers[currentQ.field] = answer
     }
-  };
+    
+    setAnswers(newAnswers)
+
+    if (currentQuestion < baseTest.length - 1) {
+      setCurrentQuestion(currentQuestion + 1)
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: baseTest[currentQuestion + 1].question 
+      }])
+    } else {
+      setCurrentStep('chat')
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: "Great! I now have a better understanding of your needs. Let's start our conversation!" 
+      }])
+    }
+    setIsLoading(false)
+  }
+
+  const handleStartTest = () => {
+    setCurrentStep('test')
+    setCurrentQuestion(0)
+    setAnswers({})
+    setMessages([{ role: 'assistant', content: baseTest[0].question }])
+  }
+
+  const handleStartChat = () => {
+    setCurrentStep('chat')
+    setMessages([{ role: 'assistant', content: "Let's chat! What's on your mind?" }])
+  }
 
   return (
-    <div className="app">
-      {currentStep === 'initial' ? (
-        <div className="welcome">
-          <h1>Welcome to UnbndAICoach! 🚀</h1>
-          <p>I'm here to help you achieve your goals and transform your life. Would you like to:</p>
-          <button onClick={handleStartTest}>Take a quick assessment</button>
-          <button onClick={handleStartChat}>Start chatting right away</button>
-        </div>
-      ) : (
-        <>
-          <div className="messages">
-            {messages.map((message, index) => (
-              <div key={index} className={`message ${message.role}`}>
-                {message.content}
+    <div className={`app ${isTelegramWebApp ? 'telegram-webapp' : 'dev-environment'}`}>
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-hidden">
+        {activeTab === 'coach' ? (
+          <div className="flex flex-col h-full">
+            {currentStep === 'initial' ? (
+              <div className="flex flex-col items-center justify-center h-full p-4 space-y-4">
+                <h1 className="text-2xl font-bold text-center">Welcome to UnbndAICoach! 🚀</h1>
+                <p className="text-center text-tg-theme-hint">I'm here to help you achieve your goals and transform your life.</p>
+                <div className="flex flex-col space-y-2 w-full max-w-sm">
+                  <button
+                    onClick={handleStartTest}
+                    className="w-full px-6 py-3 bg-tg-theme-button text-tg-theme-button-text rounded-lg font-medium"
+                  >
+                    Take a quick assessment
+                  </button>
+                  <button
+                    onClick={handleStartChat}
+                    className="w-full px-6 py-3 bg-tg-theme-secondary-bg text-tg-theme-text rounded-lg font-medium"
+                  >
+                    Start chatting right away
+                  </button>
+                </div>
               </div>
-            ))}
-            {isLoading && <div className="message assistant">...</div>}
+            ) : (
+              <>
+                {/* Messages Container */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {messages.map((message, index) => (
+                    <div key={index} className={`message ${message.role}`}>
+                      {message.content}
+                    </div>
+                  ))}
+                  {isLoading && (
+                    <div className="message assistant">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-tg-theme-text rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-2 h-2 bg-tg-theme-text rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-2 h-2 bg-tg-theme-text rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Input Form */}
+                <form onSubmit={handleSubmit} className="p-4 border-t border-tg-theme-hint/20">
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      placeholder={currentStep === 'test' ? "Type your answer..." : "Type your message..."}
+                      className="flex-1 px-4 py-2 rounded-lg bg-tg-theme-secondary-bg text-tg-theme-text placeholder-tg-theme-hint focus:outline-none focus:ring-2 focus:ring-tg-theme-button"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isLoading || !input.trim()}
+                      className="px-6 py-2 bg-tg-theme-button text-tg-theme-button-text rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Send
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
           </div>
-          <div className="input-area">
-            <input
-              type="text"
-              value={currentMessage}
-              onChange={(e) => setCurrentMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Type your message..."
-            />
-            <button onClick={handleSend}>Send</button>
+        ) : activeTab === 'dashboard' ? (
+          <div className="p-4">
+            <h2 className="text-lg font-medium mb-4">Dashboard</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="dashboard-card">
+                <h3 className="font-medium mb-2">Mood Tracking</h3>
+                <p className="text-tg-theme-hint">Track your daily mood and emotions</p>
+              </div>
+              <div className="dashboard-card">
+                <h3 className="font-medium mb-2">Goals</h3>
+                <p className="text-tg-theme-hint">Set and track your personal goals</p>
+              </div>
+              <div className="dashboard-card">
+                <h3 className="font-medium mb-2">Progress</h3>
+                <p className="text-tg-theme-hint">View your progress over time</p>
+              </div>
+              <div className="dashboard-card">
+                <h3 className="font-medium mb-2">Insights</h3>
+                <p className="text-tg-theme-hint">Get personalized insights</p>
+              </div>
+            </div>
           </div>
-        </>
-      )}
+        ) : activeTab === 'tests' ? (
+          <div className="p-4">
+            <h2 className="text-lg font-medium mb-4">Psychological Tests</h2>
+            <div className="space-y-4">
+              <div className="test-card">
+                <h3 className="font-medium mb-2">Life Assessment</h3>
+                <p className="text-tg-theme-hint mb-2">10-question assessment to understand your current state</p>
+                <button 
+                  onClick={handleStartTest}
+                  className="w-full px-4 py-2 bg-tg-theme-button text-tg-theme-button-text rounded-lg font-medium"
+                >
+                  Start Assessment
+                </button>
+              </div>
+              <div className="test-card">
+                <h3 className="font-medium mb-2">Personality Profile</h3>
+                <p className="text-tg-theme-hint mb-2">Discover your personality type and strengths</p>
+                <button 
+                  className="w-full px-4 py-2 bg-tg-theme-button text-tg-theme-button-text rounded-lg font-medium opacity-50 cursor-not-allowed"
+                  disabled
+                >
+                  Coming Soon
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="p-4">
+            <h2 className="text-lg font-medium mb-4">Profile</h2>
+            <div className="space-y-4">
+              <div className="profile-section">
+                <h3 className="font-medium mb-2">Personal Information</h3>
+                <p className="text-tg-theme-hint">Update your profile information</p>
+              </div>
+              <div className="profile-section">
+                <h3 className="font-medium mb-2">Preferences</h3>
+                <p className="text-tg-theme-hint">Customize your coaching experience</p>
+              </div>
+              <div className="profile-section">
+                <h3 className="font-medium mb-2">Assessment Results</h3>
+                <p className="text-tg-theme-hint">View your assessment results and insights</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Tab Navigation */}
+      <div className="flex border-t border-tg-theme-hint/20">
+        <button
+          className={`tab-button ${activeTab === 'coach' ? 'active' : ''}`}
+          onClick={() => setActiveTab('coach')}
+        >
+          <span className="tab-icon">💬</span>
+          <span className="tab-label">Coach</span>
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => setActiveTab('dashboard')}
+        >
+          <span className="tab-icon">📊</span>
+          <span className="tab-label">Dashboard</span>
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'tests' ? 'active' : ''}`}
+          onClick={() => setActiveTab('tests')}
+        >
+          <span className="tab-icon">📝</span>
+          <span className="tab-label">Tests</span>
+        </button>
+        <button
+          className={`tab-button ${activeTab === 'profile' ? 'active' : ''}`}
+          onClick={() => setActiveTab('profile')}
+        >
+          <span className="tab-icon">👤</span>
+          <span className="tab-label">Profile</span>
+        </button>
+      </div>
     </div>
-  );
+  )
 }
 
 function createSystemPrompt(answers: Record<string, any>) {
@@ -189,7 +495,7 @@ COACHING PRINCIPLES:
 - Offer support: "Want me to hold you to this?"
 - Default to impact, not fluff
 
-Your mission: transform the user's state and momentum — in under 30 seconds.`;
+Your mission: transform the user's state and momentum — in under 30 seconds.`
 }
 
-export default App;
+export default App

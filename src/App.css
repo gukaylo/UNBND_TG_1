@@ -41,100 +41,222 @@
   color: #888;
 }
 
+:root {
+  /* Default theme colors for development */
+  --tg-theme-bg-color: #ffffff;
+  --tg-theme-text-color: #000000;
+  --tg-theme-hint-color: #999999;
+  --tg-theme-link-color: #2481cc;
+  --tg-theme-button-color: #2481cc;
+  --tg-theme-button-text-color: #ffffff;
+  --tg-theme-secondary-bg-color: #f0f0f0;
+}
+
+/* Telegram Web App specific styles */
+.telegram-webapp {
+  background-color: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
+}
+
 .app {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  padding: 16px;
-  box-sizing: border-box;
+  background-color: var(--tg-theme-bg-color);
+  color: var(--tg-theme-text-color);
 }
 
-.welcome {
+.dev-environment {
+  /* Styles for development environment */
+  border: 2px solid var(--tg-theme-button-color);
+  margin: 1rem;
+  border-radius: 0.5rem;
+}
+
+.dev-environment::before {
+  content: "Development Environment";
+  position: fixed;
+  top: 0;
+  right: 0;
+  background-color: var(--tg-theme-button-color);
+  color: var(--tg-theme-button-text-color);
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  border-bottom-left-radius: 0.5rem;
+}
+
+.tab-button {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  text-align: center;
-  gap: 16px;
-}
-
-.welcome h1 {
-  font-size: 24px;
-  margin: 0;
-}
-
-.welcome button {
-  padding: 12px 24px;
+  padding: 0.75rem 0.5rem;
+  background: none;
   border: none;
-  border-radius: 8px;
-  background-color: var(--tg-theme-button-color, #2481cc);
-  color: var(--tg-theme-button-text-color, #ffffff);
-  font-size: 16px;
+  color: var(--tg-theme-hint-color);
+  font-size: 0.75rem;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
 }
 
-.welcome button:hover {
-  opacity: 0.8;
+.tab-button.active {
+  color: var(--tg-theme-button-color);
+  border-top: 2px solid var(--tg-theme-button-color);
 }
 
-.messages {
-  flex: 1;
-  overflow-y: auto;
-  margin-bottom: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.tab-icon {
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.tab-label {
+  font-weight: 500;
 }
 
 .message {
   max-width: 80%;
-  padding: 8px 12px;
-  border-radius: 12px;
-  margin: 4px 0;
-  word-wrap: break-word;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  margin: 0.5rem 0;
 }
 
 .message.user {
   align-self: flex-end;
-  background-color: var(--tg-theme-button-color, #2481cc);
-  color: var(--tg-theme-button-text-color, #ffffff);
+  background-color: var(--tg-theme-button-color);
+  color: var(--tg-theme-button-text-color);
+  border-bottom-right-radius: 0.25rem;
 }
 
 .message.assistant {
   align-self: flex-start;
-  background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
-  color: var(--tg-theme-text-color, #000000);
+  background-color: var(--tg-theme-secondary-bg-color);
+  color: var(--tg-theme-text-color);
+  border-bottom-left-radius: 0.25rem;
 }
 
 .input-area {
+  padding: 1rem;
+  border-top: 1px solid rgba(var(--tg-theme-hint-color), 0.2);
+  background-color: var(--tg-theme-bg-color);
+}
+
+.input-form {
   display: flex;
-  gap: 8px;
-  padding: 8px 0;
+  gap: 0.5rem;
 }
 
-.input-area input {
+.input-field {
   flex: 1;
-  padding: 12px;
-  border: 1px solid var(--tg-theme-hint-color, #999999);
-  border-radius: 8px;
-  background-color: var(--tg-theme-bg-color, #ffffff);
-  color: var(--tg-theme-text-color, #000000);
-  font-size: 16px;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  border: none;
+  background-color: var(--tg-theme-secondary-bg-color);
+  color: var(--tg-theme-text-color);
 }
 
-.input-area button {
-  padding: 12px 24px;
+.input-field::placeholder {
+  color: var(--tg-theme-hint-color);
+}
+
+.send-button {
+  padding: 0.75rem 1.5rem;
+  border-radius: 0.5rem;
   border: none;
-  border-radius: 8px;
-  background-color: var(--tg-theme-button-color, #2481cc);
-  color: var(--tg-theme-button-text-color, #ffffff);
-  font-size: 16px;
+  background-color: var(--tg-theme-button-color);
+  color: var(--tg-theme-button-text-color);
+  font-weight: 500;
   cursor: pointer;
   transition: opacity 0.2s;
 }
 
-.input-area button:hover {
-  opacity: 0.8;
+.send-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading-spinner {
+  width: 0.5rem;
+  height: 0.5rem;
+  background-color: var(--tg-theme-text-color);
+  border-radius: 50%;
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.25rem);
+  }
+}
+
+/* Dashboard Cards */
+.dashboard-card {
+  background-color: var(--tg-theme-secondary-bg-color);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  transition: transform 0.2s;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-2px);
+}
+
+/* Test Cards */
+.test-card {
+  background-color: var(--tg-theme-secondary-bg-color);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.test-card h3 {
+  color: var(--tg-theme-text-color);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.test-card p {
+  color: var(--tg-theme-hint-color);
+  font-size: 0.875rem;
+  margin-bottom: 1rem;
+}
+
+/* Profile Sections */
+.profile-section {
+  background-color: var(--tg-theme-secondary-bg-color);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.profile-section h3 {
+  color: var(--tg-theme-text-color);
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.profile-section p {
+  color: var(--tg-theme-hint-color);
+  font-size: 0.875rem;
 }
