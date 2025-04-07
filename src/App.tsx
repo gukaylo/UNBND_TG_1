@@ -152,37 +152,27 @@ function App({ isTelegramWebApp: initialIsTelegramWebApp = false }: AppProps) {
   const [isReady, setIsReady] = useState(false)
   const [isTelegramWebApp, setIsTelegramWebApp] = useState(initialIsTelegramWebApp)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [isInitialized, setIsInitialized] = useState(false)
 
+  // Separate effect for Telegram initialization
   useEffect(() => {
-    let mounted = true;
+    const controller = new AbortController();
+    let cleanup = false;
 
-    const initTelegramApp = async () => {
+    const initTelegram = async () => {
+      if (!window.Telegram?.WebApp) {
+        console.log('Telegram WebApp not found, running in standalone mode');
+        if (!cleanup) {
+          setIsTelegramWebApp(false);
+          setIsInitialized(true);
+        }
+        return;
+      }
+
       try {
-        // Wait for DOM to be fully loaded
-        if (document.readyState === 'loading') {
-          document.addEventListener('DOMContentLoaded', initTelegramApp);
-          return;
-        }
-
-        // Ensure component is still mounted
-        if (!mounted) return;
-
-        // Ensure Telegram WebApp is available
-        if (!window.Telegram?.WebApp) {
-          console.log('Telegram WebApp not found, running in standalone mode');
-          if (mounted) {
-            setIsReady(true);
-            setIsTelegramWebApp(false);
-          }
-          return;
-        }
-
         const webapp = window.Telegram.WebApp;
-
-        // Initialize theme colors from Telegram theme
-        const root = document.documentElement;
         const theme = webapp.themeParams;
-        
+
         // Set theme variables with fallbacks
         const themeColors = {
           bg_color: theme.bg_color || '#ffffff',
@@ -194,44 +184,50 @@ function App({ isTelegramWebApp: initialIsTelegramWebApp = false }: AppProps) {
           secondary_bg_color: theme.secondary_bg_color || '#f1f1f1'
         };
 
-        Object.entries(themeColors).forEach(([key, value]) => {
-          root.style.setProperty(`--tg-theme-${key}`, value);
-        });
+        // Apply theme colors
+        if (!cleanup) {
+          const root = document.documentElement;
+          Object.entries(themeColors).forEach(([key, value]) => {
+            root.style.setProperty(`--tg-theme-${key}`, value);
+          });
 
-        // Set background color
-        webapp.setBackgroundColor(themeColors.bg_color);
-        
-        // Enable features
-        webapp.enableClosingConfirmation();
-        webapp.expand();
-        
-        // Mark as ready
-        webapp.ready();
-        
-        // Update state only if component is still mounted
-        if (mounted) {
+          webapp.setBackgroundColor(themeColors.bg_color);
+          webapp.enableClosingConfirmation();
+          webapp.expand();
+          webapp.ready();
+
           setIsTelegramWebApp(true);
-          setIsReady(true);
+          setIsInitialized(true);
         }
-        console.log('Telegram WebApp initialized successfully');
       } catch (error) {
         console.error('Error initializing Telegram Web App:', error);
-        if (mounted) {
-          setIsReady(true);
+        if (!cleanup) {
           setIsTelegramWebApp(false);
+          setIsInitialized(true);
         }
       }
     };
 
-    // Initialize immediately
-    initTelegramApp();
+    // Wait for DOM content to be loaded
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initTelegram);
+    } else {
+      initTelegram();
+    }
 
-    // Cleanup
     return () => {
-      mounted = false;
-      document.removeEventListener('DOMContentLoaded', initTelegramApp);
+      cleanup = true;
+      controller.abort();
+      document.removeEventListener('DOMContentLoaded', initTelegram);
     };
   }, []);
+
+  // Separate effect for ready state
+  useEffect(() => {
+    if (isInitialized) {
+      setIsReady(true);
+    }
+  }, [isInitialized]);
 
   if (!isReady) {
     return (
