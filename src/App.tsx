@@ -57,26 +57,103 @@ const baseTestQuestions: Question[] = [
   },
   {
     id: 2,
-    text: "What area of your life would you like to improve the most?",
+    text: "Which area of your life needs the most attention?",
     type: "options",
     options: [
-      "Career & Professional Growth",
       "Health & Fitness",
-      "Relationships & Social Life",
-      "Personal Development",
-      "Financial Wellbeing"
+      "Relationships",
+      "Career/Money",
+      "Confidence/Mindset",
+      "Focus/Discipline"
     ]
   },
   {
     id: 3,
-    text: "How often do you feel stressed or overwhelmed?",
+    text: "How would you describe your current mindset?",
     type: "options",
     options: [
-      "Rarely or never",
-      "Sometimes",
-      "Often",
-      "Most of the time",
-      "Almost always"
+      "Stuck",
+      "Don't know what I want",
+      "Making progress",
+      "Lost/overwhelmed"
+    ]
+  },
+  {
+    id: 4,
+    text: "What's your energy level like?",
+    type: "options",
+    options: [
+      "Low",
+      "Scattered",
+      "Productive",
+      "High/focused"
+    ]
+  },
+  {
+    id: 5,
+    text: "What's your biggest internal blocker?",
+    type: "options",
+    options: [
+      "Fear/doubt",
+      "Procrastination",
+      "Overthinking",
+      "Lack of clarity",
+      "Emotional overwhelm"
+    ]
+  },
+  {
+    id: 6,
+    text: "How do you follow through with habits?",
+    type: "options",
+    options: [
+      "Plan but don't act",
+      "Start but don't finish",
+      "Only when motivated",
+      "Consistent"
+    ]
+  },
+  {
+    id: 7,
+    text: "What support style works best for you?",
+    type: "options",
+    options: [
+      "Push me",
+      "Encourage me",
+      "Ask questions",
+      "Give structure"
+    ]
+  },
+  {
+    id: 8,
+    text: "How do you make decisions?",
+    type: "options",
+    options: [
+      "Logic",
+      "Emotion",
+      "Overthink",
+      "Gut"
+    ]
+  },
+  {
+    id: 9,
+    text: "What's your self-talk like when you fail?",
+    type: "options",
+    options: [
+      "Hard on self",
+      "Shut down",
+      "Problem-solve",
+      "Bounce back"
+    ]
+  },
+  {
+    id: 10,
+    text: "How ready are you for change?",
+    type: "options",
+    options: [
+      "Small shifts",
+      "Bold moves",
+      "Habit upgrades",
+      "Deep mindset"
     ]
   }
 ];
@@ -494,14 +571,19 @@ function App() {
 }
 
 function createSystemPrompt(answers: Record<string, any>) {
-  // Create a personalized profile based on test answers
   const profile = {
     lifeSatisfaction: answers[0] || 5,
     priorityArea: answers[1] || 'unknown',
-    stressLevel: answers[2] || 'unknown'
+    mindset: answers[2] || 'unknown',
+    energyLevel: answers[3] || 'unknown',
+    internalBlocker: answers[4] || 'unknown',
+    habitFollowThrough: answers[5] || 'unknown',
+    supportStyle: answers[6] || 'unknown',
+    decisionStyle: answers[7] || 'unknown',
+    failureSelfTalk: answers[8] || 'unknown',
+    changeReadiness: answers[9] || 'unknown'
   };
 
-  // Create personalized greeting based on test results
   let personalizedGreeting = '';
   
   // Life satisfaction personalization
@@ -513,48 +595,63 @@ function createSystemPrompt(answers: Record<string, any>) {
     personalizedGreeting = "I'm impressed by your current life satisfaction! Let's work on maintaining and even elevating your positive state. ";
   }
 
-  // Priority area personalization
-  if (profile.priorityArea) {
-    personalizedGreeting += `I notice you want to focus on ${profile.priorityArea}. I'll tailor our conversations to help you excel in this area. `;
+  // Add mindset acknowledgment
+  if (profile.mindset === 'Stuck') {
+    personalizedGreeting += "I understand you're feeling stuck, and I'm here to help you find a path forward. ";
+  } else if (profile.mindset === "Don't know what I want") {
+    personalizedGreeting += "I'll help you gain clarity about what you truly want. ";
+  } else if (profile.mindset === 'Making progress') {
+    personalizedGreeting += "Great to see you're making progress! Let's build on that momentum. ";
+  } else if (profile.mindset === 'Lost/overwhelmed') {
+    personalizedGreeting += "I understand you're feeling overwhelmed. We'll break things down into manageable steps. ";
   }
 
-  // Stress level personalization
-  if (profile.stressLevel === 'Rarely or never') {
-    personalizedGreeting += "Your stress management seems excellent. I'll help you maintain this positive state.";
-  } else if (profile.stressLevel === 'Sometimes' || profile.stressLevel === 'Often') {
-    personalizedGreeting += "We'll work on effective strategies to manage stress and build resilience.";
-  } else if (profile.stressLevel === 'Most of the time' || profile.stressLevel === 'Almost always') {
-    personalizedGreeting += "I understand you're dealing with significant stress. We'll prioritize stress management and finding moments of calm.";
+  // Add support style acknowledgment
+  if (profile.supportStyle === 'Push me') {
+    personalizedGreeting += "I'll challenge you to push beyond your comfort zone. ";
+  } else if (profile.supportStyle === 'Encourage me') {
+    personalizedGreeting += "I'll provide warm encouragement and reassurance. ";
+  } else if (profile.supportStyle === 'Ask questions') {
+    personalizedGreeting += "I'll ask powerful questions to help you explore deeper. ";
+  } else if (profile.supportStyle === 'Give structure') {
+    personalizedGreeting += "I'll provide clear, step-by-step guidance. ";
   }
 
-  return `You are an AI life coach with expertise in personal development, psychology, and habit formation. Your responses should be:
+  return `You are Unbound — the most personalized AI coach ever built. Your job is not to sound smart, but to change lives — fast, emotionally, and practically.
 
-PERSONALIZATION:
-- Life Satisfaction Level: ${profile.lifeSatisfaction}/10
-- Priority Focus Area: ${profile.priorityArea}
-- Stress Level: ${profile.stressLevel}
+PERSONALIZATION PROFILE:
+- Life Satisfaction: ${profile.lifeSatisfaction}/10
+- Priority Area: ${profile.priorityArea}
+- Current Mindset: ${profile.mindset}
+- Energy Level: ${profile.energyLevel}
+- Internal Blocker: ${profile.internalBlocker}
+- Habit Follow-Through: ${profile.habitFollowThrough}
+- Support Style: ${profile.supportStyle}
+- Decision Style: ${profile.decisionStyle}
+- Failure Self-Talk: ${profile.failureSelfTalk}
+- Change Readiness: ${profile.changeReadiness}
 
 COACHING STYLE:
 ${profile.lifeSatisfaction <= 4 ? '- Be extra supportive and empathetic\n- Focus on small wins\n- Emphasize self-compassion' : ''}
 ${profile.lifeSatisfaction >= 8 ? '- Be energetic and challenging\n- Focus on optimization\n- Push for excellence' : ''}
-${profile.stressLevel.includes('always') ? '- Use calming language\n- Suggest stress-reduction techniques\n- Break things into smaller steps' : ''}
+${profile.mindset === 'Lost/overwhelmed' ? '- Use calming language\n- Break things into smaller steps\n- Provide clear structure' : ''}
 
 INITIAL GREETING:
 ${personalizedGreeting}
 
-RESPONSE GUIDELINES:
-1. Match their energy level and emotional state
-2. Focus on their priority area: ${profile.priorityArea}
-3. Consider their stress level in suggestions
-4. Give clear, actionable next steps
-5. Use encouraging but realistic language
-6. Offer specific techniques and tools
-7. Check in on their progress
-8. Validate their experiences
-9. Suggest relevant resources
-10. Maintain a supportive presence
+COACHING PRINCIPLES:
+1. Every response must reflect their profile
+2. Use their preferred support style (${profile.supportStyle})
+3. Match their energy level (${profile.energyLevel})
+4. Address their internal blocker (${profile.internalBlocker})
+5. Consider their decision style (${profile.decisionStyle})
+6. Respect their change readiness (${profile.changeReadiness})
+7. Give one clear action per message
+8. Use micro-commitments
+9. Invite depth when appropriate
+10. Offer accountability
 
-Your mission: Help them achieve their goals while being mindful of their current state and preferences.`;
+Your mission: Transform their state and momentum in under 30 seconds, while staying true to their profile.`;
 }
 
 export default App
