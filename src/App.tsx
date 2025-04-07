@@ -43,6 +43,12 @@ interface Question {
   options?: string[];
 }
 
+interface TestResults {
+  lifeSatisfaction: number;
+  priorityArea: string;
+  stressLevel: string;
+}
+
 const baseTestQuestions: Question[] = [
   {
     id: 1,
@@ -122,42 +128,41 @@ function App() {
     setInput('')
     setIsLoading(true)
 
-    if (currentStep === 'test') {
-      handleAnswer(sliderValue)
-    } else {
-      try {
-        const response = await fetch('https://unbd.onrender.com/api/chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            messages: [
-              {
-                role: "system",
-                content: createSystemPrompt(answers)
-              },
-              ...messages.map(msg => ({
-                role: msg.role,
-                content: msg.content
-              })),
-              { role: "user", content: userMessage.content }
-            ]
-          }),
-        })
+    try {
+      const response = await fetch('https://unbd.onrender.com/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "system",
+              content: createSystemPrompt(answers)
+            },
+            ...messages.map(msg => ({
+              role: msg.role,
+              content: msg.content
+            })),
+            { role: "user", content: userMessage.content }
+          ]
+        }),
+      })
 
-        if (!response.ok) {
-          throw new Error('Network response was not ok')
-        }
-
-        const data = await response.json()
-        setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
-      } catch (error) {
-        console.error('Error:', error)
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, there was an error processing your request.' }])
-      } finally {
-        setIsLoading(false)
+      if (!response.ok) {
+        throw new Error('Network response was not ok')
       }
+
+      const data = await response.json()
+      setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
+    } catch (error) {
+      console.error('Error:', error)
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Sorry, there was an error processing your request.' 
+      }])
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -170,9 +175,14 @@ function App() {
     if (currentQuestion < baseTestQuestions.length - 1) {
       setCurrentQuestion(prev => prev + 1);
     } else {
+      // When test is complete, start chat with personalized greeting
       setTestInProgress(false);
       setShowAIChat(true);
       setCurrentStep('chat');
+      
+      // Create personalized greeting based on test results
+      const greeting = createSystemPrompt(answers).split('INITIAL GREETING:\n')[1].split('\n\n')[0];
+      setMessages([{ role: 'assistant', content: greeting }]);
     }
   };
 
@@ -484,52 +494,67 @@ function App() {
 }
 
 function createSystemPrompt(answers: Record<string, any>) {
-  return `Use tools from behavioral psychology, CBT, coaching, and habit science — but deliver them fast, sharp, and based on the user's vibe.
+  // Create a personalized profile based on test answers
+  const profile = {
+    lifeSatisfaction: answers[0] || 5,
+    priorityArea: answers[1] || 'unknown',
+    stressLevel: answers[2] || 'unknown'
+  };
 
-Every message should feel like a breakthrough — something the user wants to take action on immediately.
+  // Create personalized greeting based on test results
+  let personalizedGreeting = '';
+  
+  // Life satisfaction personalization
+  if (profile.lifeSatisfaction <= 4) {
+    personalizedGreeting = "I understand you're going through a challenging time. I'm here to help you find more satisfaction and joy in your life. ";
+  } else if (profile.lifeSatisfaction <= 7) {
+    personalizedGreeting = "I see you have a solid foundation to build upon. Let's work together to enhance your life satisfaction further. ";
+  } else {
+    personalizedGreeting = "I'm impressed by your current life satisfaction! Let's work on maintaining and even elevating your positive state. ";
+  }
 
-**Your style adapts fully to the user.**
+  // Priority area personalization
+  if (profile.priorityArea) {
+    personalizedGreeting += `I notice you want to focus on ${profile.priorityArea}. I'll tailor our conversations to help you excel in this area. `;
+  }
 
-LANGUAGE ADAPTATION:
-- If user speaks English: dynamically blend personas such as:
-  - Tony Robbins (power, drive)
-  - Mel Robbins (clarity, habits)
-  - Dr. Julie Smith (psychological depth)
-  - Jay Shetty (spiritual insight)
-  - James Clear (habit design)
-  - Brené Brown (vulnerability and courage)
-  - David Goggins (mental toughness)
-  - Marie Forleo (creative encouragement)
-  - Naval Ravikant (wisdom and calm logic)
-  - Tim Ferriss (optimization and experimentation)
+  // Stress level personalization
+  if (profile.stressLevel === 'Rarely or never') {
+    personalizedGreeting += "Your stress management seems excellent. I'll help you maintain this positive state.";
+  } else if (profile.stressLevel === 'Sometimes' || profile.stressLevel === 'Often') {
+    personalizedGreeting += "We'll work on effective strategies to manage stress and build resilience.";
+  } else if (profile.stressLevel === 'Most of the time' || profile.stressLevel === 'Almost always') {
+    personalizedGreeting += "I understand you're dealing with significant stress. We'll prioritize stress management and finding moments of calm.";
+  }
 
-- If user speaks Russian: adapt to styles of:
-  - Petr Osipov (bold action and mindset)
-  - Rostislav Gandapas (executive clarity)
-  - Yulia Rubleva (emotional intelligence)
-  - Tatiana Menshikh (deep coaching)
-  - Ekaterina Sivanova (supportive structure)
-  - Igor Nezovibatko (provocative breakthroughs)
-  - Alexey Sitnikov (psycho-strategic influence)
-  - Irina Khakamada (freedom, clarity)
-  - Marina Melia (executive empathy)
-  - Alexander Palienko (energy and transformation)
+  return `You are an AI life coach with expertise in personal development, psychology, and habit formation. Your responses should be:
 
-TONE ADAPTATION:
-- Feel their energy: if they're direct — be clear and efficient. If emotional — be warm and grounded. If unsure — be calm, bold, and supportive.
+PERSONALIZATION:
+- Life Satisfaction Level: ${profile.lifeSatisfaction}/10
+- Priority Focus Area: ${profile.priorityArea}
+- Stress Level: ${profile.stressLevel}
 
-PERSONALIZATION ENGINE:
-Based on the user's test results: ${JSON.stringify(answers, null, 2)}
+COACHING STYLE:
+${profile.lifeSatisfaction <= 4 ? '- Be extra supportive and empathetic\n- Focus on small wins\n- Emphasize self-compassion' : ''}
+${profile.lifeSatisfaction >= 8 ? '- Be energetic and challenging\n- Focus on optimization\n- Push for excellence' : ''}
+${profile.stressLevel.includes('always') ? '- Use calming language\n- Suggest stress-reduction techniques\n- Break things into smaller steps' : ''}
 
-COACHING PRINCIPLES:
-- Speak in short, vivid, emotionally engaging sentences
-- Give one key insight or action per message
-- Use micro-commitments like "Try this for 30 seconds"
-- Invite depth: "Want to go deeper?"
-- Offer support: "Want me to hold you to this?"
-- Default to impact, not fluff
+INITIAL GREETING:
+${personalizedGreeting}
 
-Your mission: transform the user's state and momentum — in under 30 seconds.`
+RESPONSE GUIDELINES:
+1. Match their energy level and emotional state
+2. Focus on their priority area: ${profile.priorityArea}
+3. Consider their stress level in suggestions
+4. Give clear, actionable next steps
+5. Use encouraging but realistic language
+6. Offer specific techniques and tools
+7. Check in on their progress
+8. Validate their experiences
+9. Suggest relevant resources
+10. Maintain a supportive presence
+
+Your mission: Help them achieve their goals while being mindful of their current state and preferences.`;
 }
 
 export default App
