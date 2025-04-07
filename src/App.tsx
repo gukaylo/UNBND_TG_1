@@ -156,29 +156,46 @@ function App({ isTelegramWebApp: initialIsTelegramWebApp = false }: AppProps) {
   useEffect(() => {
     const initTelegramApp = () => {
       try {
-        if (window.Telegram?.WebApp) {
-          const webapp = window.Telegram.WebApp;
-          
-          // Initialize theme colors from Telegram theme
-          const root = document.documentElement;
-          const theme = webapp.themeParams;
-          
-          root.style.setProperty('--tg-theme-bg-color', theme.bg_color);
-          root.style.setProperty('--tg-theme-text-color', theme.text_color);
-          root.style.setProperty('--tg-theme-hint-color', theme.hint_color);
-          root.style.setProperty('--tg-theme-link-color', theme.link_color);
-          root.style.setProperty('--tg-theme-button-color', theme.button_color);
-          root.style.setProperty('--tg-theme-button-text-color', theme.button_text_color);
-          root.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color);
-
-          // Set background and expand the app
-          webapp.expand();
-          webapp.ready();
-          
-          setIsTelegramWebApp(true);
-        } else {
-          console.log('Running in standalone mode');
+        // Wait for DOM to be fully loaded
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', initTelegramApp);
+          return;
         }
+
+        // Ensure Telegram WebApp is available
+        if (!window.Telegram?.WebApp) {
+          console.log('Telegram WebApp not found, running in standalone mode');
+          setIsReady(true);
+          return;
+        }
+
+        const webapp = window.Telegram.WebApp;
+
+        // Initialize theme colors from Telegram theme
+        const root = document.documentElement;
+        const theme = webapp.themeParams;
+        
+        // Set theme variables with fallbacks
+        root.style.setProperty('--tg-theme-bg-color', theme.bg_color || '#ffffff');
+        root.style.setProperty('--tg-theme-text-color', theme.text_color || '#000000');
+        root.style.setProperty('--tg-theme-hint-color', theme.hint_color || '#999999');
+        root.style.setProperty('--tg-theme-link-color', theme.link_color || '#2481cc');
+        root.style.setProperty('--tg-theme-button-color', theme.button_color || '#2481cc');
+        root.style.setProperty('--tg-theme-button-text-color', theme.button_text_color || '#ffffff');
+        root.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color || '#f1f1f1');
+
+        // Set background color
+        webapp.setBackgroundColor(theme.bg_color || '#ffffff');
+        
+        // Enable features
+        webapp.enableClosingConfirmation();
+        webapp.expand();
+        
+        // Mark as ready
+        webapp.ready();
+        
+        setIsTelegramWebApp(true);
+        console.log('Telegram WebApp initialized successfully');
       } catch (error) {
         console.error('Error initializing Telegram Web App:', error);
       } finally {
@@ -186,8 +203,13 @@ function App({ isTelegramWebApp: initialIsTelegramWebApp = false }: AppProps) {
       }
     };
 
-    // Initialize immediately
-    initTelegramApp();
+    // Initialize with a slight delay to ensure everything is loaded
+    setTimeout(initTelegramApp, 100);
+
+    // Cleanup
+    return () => {
+      document.removeEventListener('DOMContentLoaded', initTelegramApp);
+    };
   }, []);
 
   if (!isReady) {
