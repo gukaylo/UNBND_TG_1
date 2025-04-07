@@ -9,9 +9,16 @@ export default defineConfig({
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: true,
+    target: 'esnext',
+    minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        format: 'iife',
+      },
+    },
   },
   server: {
-    port: 5173,
+    port: 3000,
     strictPort: true,
   },
 })
