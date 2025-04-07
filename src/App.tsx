@@ -36,103 +36,42 @@ interface TestQuestion {
   options?: Record<string, string>
 }
 
-// Base test questions
-const baseTest: TestQuestion[] = [
+interface Question {
+  id: number;
+  text: string;
+  type: 'slider' | 'options';
+  options?: string[];
+}
+
+const baseTestQuestions: Question[] = [
   {
-    question: "On a scale of 1-10, how satisfied are you with your life right now?",
-    field: "lifeSatisfaction"
+    id: 1,
+    text: "On a scale of 1-10, how satisfied are you with your life right now?",
+    type: "slider"
   },
   {
-    question: "Which area of your life needs the most attention?\na) Health\nb) Relationships\nc) Career/Money\nd) Confidence/Mindset\ne) Focus/Discipline",
-    field: "priorityArea",
-    options: {
-      "a": "health",
-      "b": "relationships",
-      "c": "career",
-      "d": "confidence",
-      "e": "focus"
-    }
+    id: 2,
+    text: "What area of your life would you like to improve the most?",
+    type: "options",
+    options: [
+      "Career & Professional Growth",
+      "Health & Fitness",
+      "Relationships & Social Life",
+      "Personal Development",
+      "Financial Wellbeing"
+    ]
   },
   {
-    question: "How would you describe your current mindset?\na) Stuck\nb) Don't know what I want\nc) Making progress\nd) Lost/overwhelmed",
-    field: "currentMindset",
-    options: {
-      "a": "stuck",
-      "b": "unsure",
-      "c": "progress",
-      "d": "lost"
-    }
-  },
-  {
-    question: "What's your energy level like?\na) Low\nb) Scattered\nc) Productive\nd) High/focused",
-    field: "energyLevel",
-    options: {
-      "a": "low",
-      "b": "scattered",
-      "c": "productive",
-      "d": "high"
-    }
-  },
-  {
-    question: "What's your biggest internal blocker?\na) Fear/doubt\nb) Procrastination\nc) Overthinking\nd) Lack of clarity\ne) Emotional overwhelm",
-    field: "internalBlocker",
-    options: {
-      "a": "fear",
-      "b": "procrastination",
-      "c": "overthinking",
-      "d": "clarity",
-      "e": "emotional"
-    }
-  },
-  {
-    question: "How do you follow through with habits?\na) Plan but don't act\nb) Start but don't finish\nc) Only when motivated\nd) Consistent",
-    field: "followThroughHabits",
-    options: {
-      "a": "planner",
-      "b": "starter",
-      "c": "motivated",
-      "d": "consistent"
-    }
-  },
-  {
-    question: "What support style works best for you?\na) Push me\nb) Encourage me\nc) Ask questions\nd) Give structure",
-    field: "preferredSupportStyle",
-    options: {
-      "a": "push",
-      "b": "encourage",
-      "c": "questions",
-      "d": "structure"
-    }
-  },
-  {
-    question: "How do you make decisions?\na) Logic\nb) Emotion\nc) Overthink\nd) Gut",
-    field: "decisionStyle",
-    options: {
-      "a": "logic",
-      "b": "emotions",
-      "c": "overthink",
-      "d": "gut"
-    }
-  },
-  {
-    question: "What's your self-talk like when you fail?\na) Hard on self\nb) Shut down\nc) Problem-solve\nd) Bounce back",
-    field: "selfTalkInFailure",
-    options: {
-      "a": "critical",
-      "b": "shutdown",
-      "c": "solver",
-      "d": "resilient"
-    }
-  },
-  {
-    question: "How ready are you for change?\na) Small shifts\nb) Bold moves\nc) Habit upgrades\nd) Deep mindset",
-    field: "changeReadiness",
-    options: {
-      "a": "small",
-      "b": "bold",
-      "c": "habits",
-      "d": "deep"
-    }
+    id: 3,
+    text: "How often do you feel stressed or overwhelmed?",
+    type: "options",
+    options: [
+      "Rarely or never",
+      "Sometimes",
+      "Often",
+      "Most of the time",
+      "Almost always"
+    ]
   }
 ];
 
@@ -145,6 +84,9 @@ function App() {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answers, setAnswers] = useState<Record<string, any>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [sliderValue, setSliderValue] = useState(5);
+  const [showAIChat, setShowAIChat] = useState(true);
+  const [testInProgress, setTestInProgress] = useState(false);
 
   // Simple Telegram initialization
   useEffect(() => {
@@ -181,7 +123,7 @@ function App() {
     setIsLoading(true)
 
     if (currentStep === 'test') {
-      handleTestAnswer(userMessage.content)
+      handleAnswer(sliderValue)
     } else {
       try {
         const response = await fetch('https://unbd.onrender.com/api/chat', {
@@ -219,50 +161,27 @@ function App() {
     }
   }
 
-  const handleTestAnswer = (answer: string) => {
-    const newAnswers = { ...answers }
-    const currentQ = baseTest[currentQuestion]
-    
-    if (currentQ.options) {
-      const option = answer.toLowerCase().trim()
-      if (option in currentQ.options) {
-        newAnswers[currentQ.field] = currentQ.options[option as keyof typeof currentQ.options]
-      } else {
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content: 'Please select a valid option (a, b, c, d, or e).' 
-        }])
-        setIsLoading(false)
-        return
-      }
-    } else {
-      newAnswers[currentQ.field] = answer
-    }
-    
-    setAnswers(newAnswers)
+  const handleAnswer = (answer: any) => {
+    setAnswers(prev => ({
+      ...prev,
+      [currentQuestion]: answer
+    }));
 
-    if (currentQuestion < baseTest.length - 1) {
-      setCurrentQuestion(currentQuestion + 1)
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: baseTest[currentQuestion + 1].question 
-      }])
+    if (currentQuestion < baseTestQuestions.length - 1) {
+      setCurrentQuestion(prev => prev + 1);
     } else {
-      setCurrentStep('chat')
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: "Great! I now have a better understanding of your needs. Let's start our conversation!" 
-      }])
+      setTestInProgress(false);
+      setShowAIChat(true);
+      setCurrentStep('chat');
     }
-    setIsLoading(false)
-  }
+  };
 
   const handleStartTest = () => {
-    setCurrentStep('test')
-    setCurrentQuestion(0)
-    setAnswers({})
-    setMessages([{ role: 'assistant', content: baseTest[0].question }])
-  }
+    setTestInProgress(true);
+    setShowAIChat(false);
+    setCurrentStep('test');
+    setCurrentQuestion(0);
+  };
 
   const handleStartChat = () => {
     setCurrentStep('chat')
@@ -277,76 +196,106 @@ function App() {
     scrollToBottom()
   }, [messages])
 
+  const renderQuestion = () => {
+    const question = baseTestQuestions[currentQuestion];
+    if (!question) return null;
+
+    switch (question.type) {
+      case 'slider':
+        return (
+          <div className="question-container">
+            <h2>{question.text}</h2>
+            <div className="slider-container">
+              <input
+                type="range"
+                min="1"
+                max="10"
+                value={sliderValue}
+                onChange={(e) => setSliderValue(parseInt(e.target.value))}
+                className="slider"
+              />
+              <div className="slider-value">{sliderValue}</div>
+              <button 
+                className="primary-button"
+                onClick={() => handleAnswer(sliderValue)}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        );
+      case 'options':
+        return (
+          <div className="question-container">
+            <h2>{question.text}</h2>
+            <div className="options-container">
+              {question.options?.map((option, index) => (
+                <button
+                  key={index}
+                  className="option-button"
+                  onClick={() => handleAnswer(option)}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="app">
       <div className="content-area">
         {activeTab === 'coach' ? (
-          <div className="h-full">
+          <div className="chat-container">
             {currentStep === 'initial' ? (
               <div className="welcome-screen">
-                <div className="rating-card">
-                  <div className="rating-info">
-                    <div className="avatar">AI</div>
-                    <div className="rating-details">
-                      <h4>Your Coach</h4>
-                      <div className="rating-points">Ready to help</div>
-                    </div>
-                  </div>
+                <h1>Welcome to UnbndAICoach</h1>
+                <p>Let's start by understanding where you are in your journey</p>
+                <div className="button-container">
+                  <button
+                    onClick={handleStartTest}
+                    className="primary-button"
+                  >
+                    Take the base test
+                  </button>
+                  {showAIChat && (
+                    <button
+                      onClick={() => setCurrentStep('chat')}
+                      className="primary-button"
+                    >
+                      Start chatting right away
+                    </button>
+                  )}
                 </div>
-                <h1>Welcome to UnbndAICoach! 🚀</h1>
-                <p>I'm here to help you achieve your goals and transform your life through personalized coaching.</p>
-                <button
-                  onClick={handleStartTest}
-                  className="primary-button"
-                >
-                  Take a quick assessment
-                </button>
-                <button
-                  onClick={handleStartChat}
-                  className="primary-button"
-                >
-                  Start chatting right away
-                </button>
               </div>
+            ) : currentStep === 'test' ? (
+              renderQuestion()
             ) : (
-              <>
-                <div className="messages-container">
-                  {messages.map((message, index) => (
-                    <div key={index} className={`message ${message.role}`}>
-                      {message.content}
+              <div className="messages-container">
+                <div className="messages" ref={messagesEndRef}>
+                  {messages.map((msg, index) => (
+                    <div key={index} className={`message ${msg.role}`}>
+                      {msg.content}
                     </div>
                   ))}
-                  {isLoading && (
-                    <div className="message assistant">
-                      <div className="loading-dots">
-                        <div className="dot"></div>
-                        <div className="dot"></div>
-                        <div className="dot"></div>
-                      </div>
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
                 </div>
                 <div className="input-area">
-                  <form onSubmit={handleSubmit} className="input-form">
-                    <input
-                      type="text"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      placeholder={currentStep === 'test' ? "Type your answer..." : "Type your message..."}
-                      className="input-field"
-                      autoComplete="off"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isLoading || !input.trim()}
-                      className="send-button"
-                    >
-                      Send
-                    </button>
-                  </form>
+                  <input
+                    type="text"
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Type your message..."
+                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}
+                  />
+                  <button onClick={handleSubmit} disabled={isLoading}>
+                    Send
+                  </button>
                 </div>
-              </>
+              </div>
             )}
           </div>
         ) : activeTab === 'dashboard' ? (
