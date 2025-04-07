@@ -10,8 +10,17 @@ declare global {
         expand: () => void
         enableClosingConfirmation: () => void
         setBackgroundColor: (color: string) => void
-        colorScheme: string
-        themeParams: any
+        backgroundColor: string
+        headerColor: string
+        themeParams: {
+          bg_color: string
+          text_color: string
+          hint_color: string
+          link_color: string
+          button_color: string
+          button_text_color: string
+          secondary_bg_color: string
+        }
       }
     }
   }
@@ -144,93 +153,42 @@ function App({ isTelegramWebApp: initialIsTelegramWebApp = false }: AppProps) {
   const [isTelegramWebApp, setIsTelegramWebApp] = useState(initialIsTelegramWebApp)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
-  // Initialize Telegram Web App
   useEffect(() => {
-    const initTelegramWebApp = () => {
-      if (window.Telegram?.WebApp) {
-        try {
-          // Initialize the Web App
-          window.Telegram.WebApp.ready();
+    const initTelegramApp = () => {
+      try {
+        if (window.Telegram?.WebApp) {
+          const webapp = window.Telegram.WebApp;
           
-          // Get Telegram theme colors and parameters
-          const colorScheme = window.Telegram.WebApp.colorScheme;
-          const themeParams = window.Telegram.WebApp.themeParams;
+          // Initialize theme colors from Telegram theme
+          const root = document.documentElement;
+          const theme = webapp.themeParams;
           
-          // Set the background color based on Telegram's theme
-          const bgColor = colorScheme === 'dark' ? '#1C1C1E' : '#ffffff';
-          window.Telegram.WebApp.setBackgroundColor(bgColor);
-          
-          // Update CSS variables based on Telegram theme
-          document.documentElement.style.setProperty('--tg-theme-bg-color', bgColor);
-          document.documentElement.style.setProperty('--tg-theme-text-color', colorScheme === 'dark' ? '#ffffff' : '#000000');
-          document.documentElement.style.setProperty('--tg-theme-hint-color', colorScheme === 'dark' ? '#8e8e93' : '#8e8e93');
-          document.documentElement.style.setProperty('--tg-theme-link-color', themeParams?.link_color || '#0A84FF');
-          document.documentElement.style.setProperty('--tg-theme-button-color', themeParams?.button_color || '#0A84FF');
-          document.documentElement.style.setProperty('--tg-theme-button-text-color', themeParams?.button_text_color || '#ffffff');
-          document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', colorScheme === 'dark' ? '#2C2C2E' : '#f0f0f0');
-          
-          // Expand the Web App to full height
-          window.Telegram.WebApp.expand();
-          
-          // Enable closing confirmation if needed
-          window.Telegram.WebApp.enableClosingConfirmation();
-          
-          // Add a class to the body to indicate Telegram Web App
-          document.body.classList.add('telegram-webapp');
+          root.style.setProperty('--tg-theme-bg-color', theme.bg_color);
+          root.style.setProperty('--tg-theme-text-color', theme.text_color);
+          root.style.setProperty('--tg-theme-hint-color', theme.hint_color);
+          root.style.setProperty('--tg-theme-link-color', theme.link_color);
+          root.style.setProperty('--tg-theme-button-color', theme.button_color);
+          root.style.setProperty('--tg-theme-button-text-color', theme.button_text_color);
+          root.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color);
+
+          // Set background and expand the app
+          webapp.expand();
+          webapp.ready();
           
           setIsTelegramWebApp(true);
-          console.log('Telegram Web App initialized successfully');
-        } catch (error) {
-          console.error('Error initializing Telegram Web App:', error);
-          setIsTelegramWebApp(false);
+        } else {
+          console.log('Running in standalone mode');
         }
-      } else {
-        console.log('Telegram Web App not available');
-        setIsTelegramWebApp(false);
+      } catch (error) {
+        console.error('Error initializing Telegram Web App:', error);
+      } finally {
+        setIsReady(true);
       }
-      
-      setIsReady(true);
     };
 
-    // Add event listener for when the Telegram Web App script is loaded
-    if (document.readyState === 'complete') {
-      initTelegramWebApp();
-    } else {
-      window.addEventListener('load', initTelegramWebApp);
-      return () => window.removeEventListener('load', initTelegramWebApp);
-    }
+    // Initialize immediately
+    initTelegramApp();
   }, []);
-
-  // Add a second useEffect to handle Telegram theme changes
-  useEffect(() => {
-    if (window.Telegram?.WebApp) {
-      const handleThemeChange = () => {
-        const colorScheme = window.Telegram.WebApp.colorScheme
-        const themeParams = window.Telegram.WebApp.themeParams
-        
-        // Update background color
-        const bgColor = colorScheme === 'dark' ? '#1C1C1E' : '#ffffff'
-        window.Telegram.WebApp.setBackgroundColor(bgColor)
-        
-        // Update CSS variables
-        document.documentElement.style.setProperty('--tg-theme-bg-color', bgColor)
-        document.documentElement.style.setProperty('--tg-theme-text-color', colorScheme === 'dark' ? '#ffffff' : '#000000')
-        document.documentElement.style.setProperty('--tg-theme-hint-color', colorScheme === 'dark' ? '#8e8e93' : '#8e8e93')
-        document.documentElement.style.setProperty('--tg-theme-link-color', themeParams?.link_color || '#0A84FF')
-        document.documentElement.style.setProperty('--tg-theme-button-color', themeParams?.button_color || '#0A84FF')
-        document.documentElement.style.setProperty('--tg-theme-button-text-color', themeParams?.button_text_color || '#ffffff')
-        document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', colorScheme === 'dark' ? '#2C2C2E' : '#f0f0f0')
-      }
-      
-      // Listen for theme changes
-      window.Telegram.WebApp.onEvent('themeChanged', handleThemeChange)
-      
-      return () => {
-        // Clean up event listener
-        window.Telegram.WebApp.offEvent('themeChanged', handleThemeChange)
-      }
-    }
-  }, [])
 
   if (!isReady) {
     return (
@@ -241,7 +199,7 @@ function App({ isTelegramWebApp: initialIsTelegramWebApp = false }: AppProps) {
           <div className="dot"></div>
         </div>
       </div>
-    )
+    );
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
