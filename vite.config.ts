@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/UNBND_TG_1/',
+  base: '/ai-coach-telegram-web/',
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
@@ -19,6 +19,7 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    host: true,
     strictPort: true,
   },
 })

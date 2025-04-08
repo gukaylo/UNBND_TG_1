@@ -5,6 +5,7 @@ import { theme } from './theme';
 import ChatMessage from './components/ChatMessage';
 import ChatInput from './components/ChatInput';
 import ChatLoading from './components/ChatLoading';
+import { initTelegramWebApp } from './telegram-init';
 import './App.css';
 
 // Add OpenAI API configuration
@@ -114,7 +115,7 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'coach' | 'profile'>('coach')
+  const [activeTab, setActiveTab] = useState<'coach' | 'dashboard' | 'tests' | 'profile'>('coach')
   const [currentStep, setCurrentStep] = useState<'welcome' | 'assessment' | 'chat'>('welcome')
   const [currentQuestion, setCurrentQuestion] = useState<Question>({
     text: "How would you rate your current mental well-being?",
@@ -133,14 +134,18 @@ function App() {
   const [testInProgress, setTestInProgress] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
 
-  // Enhanced Telegram initialization
+  // Initialize Telegram WebApp
   useEffect(() => {
     try {
+      // Initialize Telegram WebApp
+      initTelegramWebApp();
+      
+      // Set up theme colors from Telegram
       if (window.Telegram?.WebApp) {
-        // Set theme colors
         const theme = window.Telegram.WebApp.themeParams;
         const root = document.documentElement;
         
+        // Update CSS variables with Telegram theme colors
         root.style.setProperty('--tg-theme-bg-color', theme.bg_color || '#ffffff');
         root.style.setProperty('--tg-theme-text-color', theme.text_color || '#000000');
         root.style.setProperty('--tg-theme-hint-color', theme.hint_color || '#999999');
@@ -148,12 +153,12 @@ function App() {
         root.style.setProperty('--tg-theme-button-color', theme.button_color || '#2481cc');
         root.style.setProperty('--tg-theme-button-text-color', theme.button_text_color || '#ffffff');
         root.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color || '#f1f1f1');
-
+        
         // Basic Telegram WebApp setup
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
         window.Telegram.WebApp.enableClosingConfirmation();
-
+        
         // Set background color
         window.Telegram.WebApp.setBackgroundColor(theme.bg_color || '#ffffff');
       }
@@ -384,9 +389,64 @@ function App() {
             </div>
           )}
 
+          {activeTab === 'dashboard' && (
+            <div className="dashboard-container">
+              <h1>Dashboard</h1>
+              <div className="grid">
+                <div className="dashboard-card">
+                  <h3>Progress</h3>
+                  <p>Track your coaching journey</p>
+                </div>
+                <div className="dashboard-card">
+                  <h3>Goals</h3>
+                  <p>Your active goals</p>
+                </div>
+                <div className="dashboard-card">
+                  <h3>Insights</h3>
+                  <p>AI-powered insights</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'tests' && (
+            <div className="tests-container">
+              <h1>Tests</h1>
+              <div className="test-list">
+                <div className="test-card">
+                  <h3>Personality Assessment</h3>
+                  <p>Understand your personality traits</p>
+                  <button className="primary-button">Start Test</button>
+                </div>
+                <div className="test-card">
+                  <h3>Mental Well-being Check</h3>
+                  <p>Quick mental health assessment</p>
+                  <button className="primary-button">Start Test</button>
+                </div>
+                <div className="test-card">
+                  <h3>Goal Setting Analysis</h3>
+                  <p>Analyze your goal-setting approach</p>
+                  <button className="primary-button">Start Test</button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'profile' && (
             <div className="profile-container">
               <h1>Profile</h1>
+              <div className="profile-section">
+                <h3>Personal Information</h3>
+                <p>Manage your profile details and preferences</p>
+              </div>
+              <div className="profile-section">
+                <h3>Progress History</h3>
+                <p>View your coaching journey and achievements</p>
+              </div>
+              <div className="profile-section">
+                <h3>Settings</h3>
+                <p>Customize your coaching experience</p>
+              </div>
             </div>
           )}
         </main>
@@ -402,6 +462,28 @@ function App() {
           >
             <i className="fas fa-comments"></i>
             <span>Coach</span>
+          </a>
+          <a
+            href="#"
+            className={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`}
+            onClick={(e) => {
+              e.preventDefault();
+              setActiveTab('dashboard');
+            }}
+          >
+            <i className="fas fa-chart-line"></i>
+            <span>Dashboard</span>
+          </a>
+          <a
+            href="#"
+            className={`nav-item ${activeTab === 'tests' ? 'active' : ''}`}
+            onClick={(e) => {
+              e.preventDefault();
+              setActiveTab('tests');
+            }}
+          >
+            <i className="fas fa-clipboard-list"></i>
+            <span>Tests</span>
           </a>
           <a
             href="#"
