@@ -1,5 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { theme } from './theme';
+import ChatMessage from './components/ChatMessage';
+import ChatInput from './components/ChatInput';
+import ChatLoading from './components/ChatLoading';
 import './App.css';
+
+// Add OpenAI API configuration
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
 
 declare global {
   interface Window {
@@ -26,8 +36,8 @@ declare global {
 }
 
 interface Message {
-  role: 'user' | 'assistant'
-  content: string
+  role: 'user' | 'assistant';
+  content: string;
 }
 
 interface TestQuestion {
@@ -37,10 +47,8 @@ interface TestQuestion {
 }
 
 interface Question {
-  id: number;
   text: string;
-  type: 'slider' | 'options';
-  options?: string[];
+  options: string[];
 }
 
 interface TestResults {
@@ -51,109 +59,53 @@ interface TestResults {
 
 const baseTestQuestions: Question[] = [
   {
-    id: 1,
-    text: "On a scale of 1-10, how satisfied are you with your life right now?",
-    type: "slider"
+    text: "How would you rate your current mental well-being?",
+    options: [
+      "Excellent - I feel great!",
+      "Good - I'm doing well overall",
+      "Fair - I have some concerns",
+      "Poor - I'm struggling",
+      "Very poor - I need help"
+    ]
   },
   {
-    id: 2,
     text: "Which area of your life needs the most attention?",
-    type: "options",
     options: [
-      "Health & Fitness",
+      "Career & Work",
       "Relationships",
-      "Career/Money",
-      "Confidence/Mindset",
-      "Focus/Discipline"
+      "Health & Wellness",
+      "Personal Growth",
+      "Life Purpose"
     ]
   },
   {
-    id: 3,
     text: "How would you describe your current mindset?",
-    type: "options",
     options: [
-      "Stuck",
-      "Don't know what I want",
-      "Making progress",
-      "Lost/overwhelmed"
+      "Growth-oriented",
+      "Fixed but willing to change",
+      "Somewhat resistant",
+      "Very resistant",
+      "Unsure"
     ]
   },
   {
-    id: 4,
     text: "What's your energy level like?",
-    type: "options",
     options: [
-      "Low",
-      "Scattered",
-      "Productive",
-      "High/focused"
+      "High energy all day",
+      "Good energy with some dips",
+      "Moderate energy levels",
+      "Low energy most days",
+      "Very low energy"
     ]
   },
   {
-    id: 5,
     text: "What's your biggest internal blocker?",
-    type: "options",
     options: [
-      "Fear/doubt",
-      "Procrastination",
-      "Overthinking",
-      "Lack of clarity",
-      "Emotional overwhelm"
-    ]
-  },
-  {
-    id: 6,
-    text: "How do you follow through with habits?",
-    type: "options",
-    options: [
-      "Plan but don't act",
-      "Start but don't finish",
-      "Only when motivated",
-      "Consistent"
-    ]
-  },
-  {
-    id: 7,
-    text: "What support style works best for you?",
-    type: "options",
-    options: [
-      "Push me",
-      "Encourage me",
-      "Ask questions",
-      "Give structure"
-    ]
-  },
-  {
-    id: 8,
-    text: "How do you make decisions?",
-    type: "options",
-    options: [
-      "Logic",
-      "Emotion",
-      "Overthink",
-      "Gut"
-    ]
-  },
-  {
-    id: 9,
-    text: "What's your self-talk like when you fail?",
-    type: "options",
-    options: [
-      "Hard on self",
-      "Shut down",
-      "Problem-solve",
-      "Bounce back"
-    ]
-  },
-  {
-    id: 10,
-    text: "How ready are you for change?",
-    type: "options",
-    options: [
-      "Small shifts",
-      "Bold moves",
-      "Habit upgrades",
-      "Deep mindset"
+      "Fear of failure",
+      "Perfectionism",
+      "Lack of motivation",
+      "Self-doubt",
+      "Procrastination"
     ]
   }
 ];
@@ -162,16 +114,26 @@ function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState<'coach' | 'dashboard' | 'tests' | 'profile'>('coach')
-  const [currentStep, setCurrentStep] = useState<'initial' | 'test' | 'chat'>('initial')
-  const [currentQuestion, setCurrentQuestion] = useState(0)
+  const [activeTab, setActiveTab] = useState<'coach' | 'profile'>('coach')
+  const [currentStep, setCurrentStep] = useState<'welcome' | 'assessment' | 'chat'>('welcome')
+  const [currentQuestion, setCurrentQuestion] = useState<Question>({
+    text: "How would you rate your current mental well-being?",
+    options: [
+      "Excellent - I feel great!",
+      "Good - I'm doing well overall",
+      "Fair - I have some concerns",
+      "Poor - I'm struggling",
+      "Very poor - I need help"
+    ]
+  })
   const [answers, setAnswers] = useState<Record<string, any>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [sliderValue, setSliderValue] = useState(5);
   const [showAIChat, setShowAIChat] = useState(true);
   const [testInProgress, setTestInProgress] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
 
-  // Simple Telegram initialization
+  // Enhanced Telegram initialization
   useEffect(() => {
     try {
       if (window.Telegram?.WebApp) {
@@ -190,28 +152,38 @@ function App() {
         // Basic Telegram WebApp setup
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
+        window.Telegram.WebApp.enableClosingConfirmation();
+
+        // Set background color
+        window.Telegram.WebApp.setBackgroundColor(theme.bg_color || '#ffffff');
       }
     } catch (error) {
       console.error('Error initializing Telegram Web App:', error);
     }
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!input.trim() || isLoading) return
-
-    const userMessage: Message = { role: 'user', content: input.trim() }
-    setMessages(prev => [...prev, userMessage])
-    setInput('')
-    setIsLoading(true)
+  const handleSubmit = async (message: string) => {
+    if (!message.trim() || isLoading) return;
 
     try {
-      const response = await fetch('https://unbd.onrender.com/api/chat', {
+      // Notify Telegram that we're processing
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.expand();
+      }
+
+      const userMessage: Message = { role: 'user', content: message.trim() };
+      setMessages(prev => [...prev, userMessage]);
+      setInput('');
+      setIsLoading(true);
+
+      const response = await fetch(OPENAI_API_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`
         },
         body: JSON.stringify({
+          model: "gpt-4",
           messages: [
             {
               role: "system",
@@ -221,59 +193,89 @@ function App() {
               role: msg.role,
               content: msg.content
             })),
-            { role: "user", content: userMessage.content }
-          ]
-        }),
-      })
+            userMessage
+          ],
+          temperature: 0.8,
+          max_tokens: 2000
+        })
+      });
 
       if (!response.ok) {
-        throw new Error('Network response was not ok')
+        throw new Error('Network response was not ok');
       }
 
-      const data = await response.json()
-      setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
-    } catch (error) {
-      console.error('Error:', error)
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: 'Sorry, there was an error processing your request.' 
-      }])
-    } finally {
-      setIsLoading(false)
-    }
-  }
+      const data = await response.json();
+      const aiMessage = data.choices[0]?.message?.content || 'Sorry, I could not generate a response.';
+      
+      setMessages(prev => [...prev, { role: 'assistant', content: aiMessage }]);
+      
+      // Force scroll to bottom after message is added
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
 
-  const handleAnswer = (answer: any) => {
+    } catch (error) {
+      console.error('Error:', error);
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: 'Sorry, there was an error processing your request. Please try again.'
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleAnswer = (answer: number) => {
+    setSelectedAnswer(answer);
     setAnswers(prev => ({
       ...prev,
-      [currentQuestion]: answer
+      [currentQuestion.text]: currentQuestion.options[answer]
     }));
 
-    if (currentQuestion < baseTestQuestions.length - 1) {
-      setCurrentQuestion(prev => prev + 1);
+    const currentIndex = baseTestQuestions.findIndex(q => q.text === currentQuestion.text);
+    if (currentIndex < baseTestQuestions.length - 1) {
+      setCurrentQuestion(baseTestQuestions[currentIndex + 1]);
     } else {
       // When test is complete, start chat with personalized greeting
       setTestInProgress(false);
-      setShowAIChat(true);
       setCurrentStep('chat');
-      
-      // Create personalized greeting based on test results
       const greeting = createSystemPrompt(answers).split('INITIAL GREETING:\n')[1].split('\n\n')[0];
       setMessages([{ role: 'assistant', content: greeting }]);
     }
+    setSelectedAnswer(null);
   };
 
   const handleStartTest = () => {
     setTestInProgress(true);
     setShowAIChat(false);
-    setCurrentStep('test');
-    setCurrentQuestion(0);
+    setCurrentStep('assessment');
+    setCurrentQuestion(baseTestQuestions[0]);
   };
 
   const handleStartChat = () => {
-    setCurrentStep('chat')
-    setMessages([{ role: 'assistant', content: "Let's chat! What's on your mind?" }])
-  }
+    console.log('Starting chat...');
+    try {
+      // Notify Telegram that we're starting a chat
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.expand();
+      }
+      
+      setCurrentStep('chat');
+      const initialMessage: Message = {
+        role: 'assistant',
+        content: "Hi! I'm your AI Coach. I'm here to help you on your journey. What would you like to talk about?"
+      };
+      setMessages([initialMessage]);
+      console.log('Chat started, messages:', [initialMessage]);
+      
+      // Force a re-render of the chat view
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    } catch (error) {
+      console.error('Error starting chat:', error);
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -284,374 +286,197 @@ function App() {
   }, [messages])
 
   const renderQuestion = () => {
-    const question = baseTestQuestions[currentQuestion];
-    if (!question) return null;
-
-    switch (question.type) {
-      case 'slider':
-        return (
-          <div className="question-container">
-            <h2>{question.text}</h2>
-            <div className="slider-container">
-              <input
-                type="range"
-                min="1"
-                max="10"
-                value={sliderValue}
-                onChange={(e) => setSliderValue(parseInt(e.target.value))}
-                className="slider"
-              />
-              <div className="slider-value">{sliderValue}</div>
-              <button 
-                className="primary-button"
-                onClick={() => handleAnswer(sliderValue)}
-              >
-                Next
-              </button>
+    return (
+      <div className="question">
+        <h2>{currentQuestion.text}</h2>
+        <div className="options">
+          {currentQuestion.options.map((option, index) => (
+            <div
+              key={index}
+              className={`option ${selectedAnswer === index ? 'selected' : ''}`}
+              onClick={() => handleAnswer(index)}
+            >
+              {option}
             </div>
-          </div>
-        );
-      case 'options':
-        return (
-          <div className="question-container">
-            <h2>{question.text}</h2>
-            <div className="options-container">
-              {question.options?.map((option, index) => (
-                <button
-                  key={index}
-                  className="option-button"
-                  onClick={() => handleAnswer(option)}
-                >
-                  {option}
-                </button>
-              ))}
-            </div>
-          </div>
-        );
-      default:
-        return null;
-    }
+          ))}
+        </div>
+      </div>
+    );
   };
 
+  const renderInputArea = () => (
+    <div className="input-area">
+      <form onSubmit={(e) => { e.preventDefault(); handleSubmit(input); }}>
+        <input
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder="Type your message..."
+          disabled={isLoading}
+        />
+        <button type="submit" disabled={isLoading || !input.trim()}>
+          {isLoading ? 'Sending...' : 'Send'}
+        </button>
+      </form>
+    </div>
+  );
+
   return (
-    <div className="app">
-      <div className="content-area">
-        {activeTab === 'coach' ? (
-          <div className="chat-container">
-            {currentStep === 'initial' ? (
-              <div className="welcome-screen">
-                <h1>Welcome to UnbndAICoach</h1>
-                <p>Let's start by understanding where you are in your journey</p>
-                <div className="button-container">
-                  <button
-                    onClick={handleStartTest}
-                    className="primary-button"
-                  >
-                    Take the base test
-                  </button>
-                  {showAIChat && (
-                    <button
-                      onClick={() => setCurrentStep('chat')}
-                      className="primary-button"
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <div className="app">
+        <main className="main-content">
+          {activeTab === 'coach' && (
+            <div className="chat-container">
+              {currentStep === 'welcome' && (
+                <div className="welcome-screen">
+                  <h1>Welcome to AI Coach</h1>
+                  <p>Let's start your journey to better mental health</p>
+                  <div className="welcome-buttons">
+                    <button 
+                      className="welcome-button" 
+                      onClick={() => {
+                        console.log('Assessment button clicked');
+                        setCurrentStep('assessment');
+                      }}
+                    >
+                      Take the base test
+                    </button>
+                    <button 
+                      className="welcome-button" 
+                      onClick={() => {
+                        console.log('Chat button clicked');
+                        handleStartChat();
+                      }}
                     >
                       Start chatting right away
                     </button>
-                  )}
-                </div>
-              </div>
-            ) : currentStep === 'test' ? (
-              renderQuestion()
-            ) : (
-              <div className="messages-container">
-                <div className="messages" ref={messagesEndRef}>
-                  {messages.map((msg, index) => (
-                    <div key={index} className={`message ${msg.role}`}>
-                      {msg.content}
-                    </div>
-                  ))}
-                </div>
-                <div className="input-area">
-                  <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Type your message..."
-                    onKeyPress={(e) => e.key === 'Enter' && handleSubmit(e)}
-                  />
-                  <button onClick={handleSubmit} disabled={isLoading}>
-                    Send
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : activeTab === 'dashboard' ? (
-          <div>
-            <div className="rating-card">
-              <div className="rating-info">
-                <div className="avatar">👤</div>
-                <div className="rating-details">
-                  <h4>Your Progress</h4>
-                  <div className="rating-points">44,347 Points</div>
-                </div>
-              </div>
-              <div className="rating-rank">#20,777</div>
-            </div>
-            <div className="grid">
-              <div className="card">
-                <h3>Mood Tracking</h3>
-                <p>Track your daily mood and emotions</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-2xl">😊</span>
-                  <button className="primary-button" style={{ margin: 0, width: 'auto', padding: '0.5rem 1rem' }}>
-                    Log Mood
-                  </button>
-                </div>
-              </div>
-              <div className="card">
-                <h3>Goals</h3>
-                <p>Your active goals and progress</p>
-                <div className="h-2 bg-tg-theme-button/20 rounded-full overflow-hidden">
-                  <div className="h-full w-3/4 bg-tg-theme-button rounded-full"></div>
-                </div>
-              </div>
-              <div className="card">
-                <h3>Insights</h3>
-                <p>Weekly performance analysis</p>
-                <div className="flex gap-1 mt-2">
-                  {['Focus', 'Energy', 'Growth'].map((tag, i) => (
-                    <span
-                      key={i}
-                      className="px-2 py-1 text-xs bg-tg-theme-button/10 text-tg-theme-button rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="card">
-                <h3>Streaks</h3>
-                <p>Consistency tracking</p>
-                <div className="flex justify-between items-end h-8 mt-2">
-                  {[0.3, 0.5, 0.4, 0.6, 0.8, 0.7, 0.9].map((height, i) => (
-                    <div
-                      key={i}
-                      className="w-3 bg-tg-theme-button rounded-t"
-                      style={{ height: `${height * 100}%` }}
-                    ></div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : activeTab === 'tests' ? (
-          <div>
-            <div className="rating-card">
-              <div className="rating-info">
-                <div className="avatar">📝</div>
-                <div className="rating-details">
-                  <h4>Assessment Center</h4>
-                  <div className="rating-points">2 tests available</div>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="card">
-                <h3>Life Assessment</h3>
-                <p>10-question assessment to understand your current state</p>
-                <button 
-                  onClick={handleStartTest}
-                  className="primary-button"
-                >
-                  Start Assessment
-                </button>
-              </div>
-              <div className="card">
-                <h3>Personality Profile</h3>
-                <p>Discover your personality type and strengths</p>
-                <button 
-                  className="primary-button"
-                  disabled
-                >
-                  Coming Soon
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <div className="rating-card">
-              <div className="rating-info">
-                <div className="avatar">👤</div>
-                <div className="rating-details">
-                  <h4>Your Profile</h4>
-                  <div className="rating-points">Premium Member</div>
-                </div>
-              </div>
-            </div>
-            <div className="space-y-4">
-              <div className="card">
-                <h3>Assessment Results</h3>
-                <div className="space-y-3 mt-2">
-                  <div className="flex justify-between items-center">
-                    <span>Life Satisfaction</span>
-                    <div className="w-32 h-2 bg-tg-theme-button/20 rounded-full overflow-hidden">
-                      <div className="h-full w-3/5 bg-tg-theme-button rounded-full"></div>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Energy Level</span>
-                    <div className="w-32 h-2 bg-tg-theme-button/20 rounded-full overflow-hidden">
-                      <div className="h-full w-4/5 bg-tg-theme-button rounded-full"></div>
-                    </div>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Goal Progress</span>
-                    <div className="w-32 h-2 bg-tg-theme-button/20 rounded-full overflow-hidden">
-                      <div className="h-full w-2/3 bg-tg-theme-button rounded-full"></div>
-                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="card">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center py-2 border-b border-tg-theme-hint/10">
-                    <span>Language</span>
-                    <span className="text-tg-theme-hint">English</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-tg-theme-hint/10">
-                    <span>Coaching Style</span>
-                    <span className="text-tg-theme-hint">Direct</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2">
-                    <span>Notifications</span>
-                    <span className="text-tg-theme-hint">On</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+              )}
 
-      <div className="bottom-nav">
-        <div className="bottom-nav-content">
-          <button
-            className={`tab-button ${activeTab === 'coach' ? 'active' : ''}`}
-            onClick={() => setActiveTab('coach')}
+              {currentStep === 'assessment' && (
+                <div className="assessment">
+                  {renderQuestion()}
+                </div>
+              )}
+
+              {currentStep === 'chat' && (
+                <div className="chat-view">
+                  <div className="messages">
+                    {messages.map((message, index) => (
+                      <ChatMessage
+                        key={index}
+                        content={message.content}
+                        role={message.role}
+                        timestamp={new Date().toLocaleTimeString()}
+                      />
+                    ))}
+                    {isLoading && <ChatLoading />}
+                  </div>
+                  <ChatInput
+                    onSend={handleSubmit}
+                    disabled={isLoading}
+                    placeholder="Type your message..."
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'profile' && (
+            <div className="profile-container">
+              <h1>Profile</h1>
+            </div>
+          )}
+        </main>
+
+        <nav className="bottom-nav">
+          <a
+            href="#"
+            className={`nav-item ${activeTab === 'coach' ? 'active' : ''}`}
+            onClick={(e) => {
+              e.preventDefault();
+              setActiveTab('coach');
+            }}
           >
-            <span className="tab-icon">💬</span>
-            <span className="tab-label">Coach</span>
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'dashboard' ? 'active' : ''}`}
-            onClick={() => setActiveTab('dashboard')}
+            <i className="fas fa-comments"></i>
+            <span>Coach</span>
+          </a>
+          <a
+            href="#"
+            className={`nav-item ${activeTab === 'profile' ? 'active' : ''}`}
+            onClick={(e) => {
+              e.preventDefault();
+              setActiveTab('profile');
+            }}
           >
-            <span className="tab-icon">📊</span>
-            <span className="tab-label">Dashboard</span>
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'tests' ? 'active' : ''}`}
-            onClick={() => setActiveTab('tests')}
-          >
-            <span className="tab-icon">📝</span>
-            <span className="tab-label">Tests</span>
-          </button>
-          <button
-            className={`tab-button ${activeTab === 'profile' ? 'active' : ''}`}
-            onClick={() => setActiveTab('profile')}
-          >
-            <span className="tab-icon">👤</span>
-            <span className="tab-label">Profile</span>
-          </button>
-        </div>
+            <i className="fas fa-user"></i>
+            <span>Profile</span>
+          </a>
+        </nav>
       </div>
-    </div>
+    </ThemeProvider>
   )
 }
 
 function createSystemPrompt(answers: Record<string, any>) {
+  // Create a default profile with empty values
   const profile = {
-    lifeSatisfaction: answers[0] || 5,
-    priorityArea: answers[1] || 'unknown',
-    mindset: answers[2] || 'unknown',
-    energyLevel: answers[3] || 'unknown',
-    internalBlocker: answers[4] || 'unknown',
-    habitFollowThrough: answers[5] || 'unknown',
-    supportStyle: answers[6] || 'unknown',
-    decisionStyle: answers[7] || 'unknown',
-    failureSelfTalk: answers[8] || 'unknown',
-    changeReadiness: answers[9] || 'unknown'
+    lifeSatisfaction: "unknown",
+    priorityArea: "unknown",
+    mindset: "unknown",
+    energyLevel: "unknown",
+    internalBlocker: "unknown"
   };
 
-  let personalizedGreeting = '';
-  
-  // Life satisfaction personalization
-  if (profile.lifeSatisfaction <= 4) {
-    personalizedGreeting = "I understand you're going through a challenging time. I'm here to help you find more satisfaction and joy in your life. ";
-  } else if (profile.lifeSatisfaction <= 7) {
-    personalizedGreeting = "I see you have a solid foundation to build upon. Let's work together to enhance your life satisfaction further. ";
-  } else {
-    personalizedGreeting = "I'm impressed by your current life satisfaction! Let's work on maintaining and even elevating your positive state. ";
+  // Update profile with any provided answers
+  if (Object.keys(answers).length > 0) {
+    Object.entries(answers).forEach(([question, answer]) => {
+      if (question.includes("mental well-being")) {
+        profile.lifeSatisfaction = answer;
+      } else if (question.includes("needs the most attention")) {
+        profile.priorityArea = answer;
+      } else if (question.includes("current mindset")) {
+        profile.mindset = answer;
+      } else if (question.includes("energy level")) {
+        profile.energyLevel = answer;
+      } else if (question.includes("internal blocker")) {
+        profile.internalBlocker = answer;
+      }
+    });
   }
 
-  // Add mindset acknowledgment
-  if (profile.mindset === 'Stuck') {
-    personalizedGreeting += "I understand you're feeling stuck, and I'm here to help you find a path forward. ";
-  } else if (profile.mindset === "Don't know what I want") {
-    personalizedGreeting += "I'll help you gain clarity about what you truly want. ";
-  } else if (profile.mindset === 'Making progress') {
-    personalizedGreeting += "Great to see you're making progress! Let's build on that momentum. ";
-  } else if (profile.mindset === 'Lost/overwhelmed') {
-    personalizedGreeting += "I understand you're feeling overwhelmed. We'll break things down into manageable steps. ";
+  let personalizedGreeting = "Hi! I'm your AI Coach. I'm here to help you on your journey. ";
+
+  // Add context based on available information
+  if (profile.lifeSatisfaction !== "unknown") {
+    personalizedGreeting += `I see you're feeling ${profile.lifeSatisfaction.toLowerCase()}. `;
+  }
+  if (profile.priorityArea !== "unknown") {
+    personalizedGreeting += `Let's focus on improving your ${profile.priorityArea.toLowerCase()}. `;
   }
 
-  // Add support style acknowledgment
-  if (profile.supportStyle === 'Push me') {
-    personalizedGreeting += "I'll challenge you to push beyond your comfort zone. ";
-  } else if (profile.supportStyle === 'Encourage me') {
-    personalizedGreeting += "I'll provide warm encouragement and reassurance. ";
-  } else if (profile.supportStyle === 'Ask questions') {
-    personalizedGreeting += "I'll ask powerful questions to help you explore deeper. ";
-  } else if (profile.supportStyle === 'Give structure') {
-    personalizedGreeting += "I'll provide clear, step-by-step guidance. ";
-  }
-
-  return `You are Unbound — the most personalized AI coach ever built. Your job is not to sound smart, but to change lives — fast, emotionally, and practically.
+  return `You are an empathetic AI coach focused on helping people improve their lives.
 
 PERSONALIZATION PROFILE:
-- Life Satisfaction: ${profile.lifeSatisfaction}/10
+- Life Satisfaction: ${profile.lifeSatisfaction}
 - Priority Area: ${profile.priorityArea}
 - Current Mindset: ${profile.mindset}
 - Energy Level: ${profile.energyLevel}
 - Internal Blocker: ${profile.internalBlocker}
-- Habit Follow-Through: ${profile.habitFollowThrough}
-- Support Style: ${profile.supportStyle}
-- Decision Style: ${profile.decisionStyle}
-- Failure Self-Talk: ${profile.failureSelfTalk}
-- Change Readiness: ${profile.changeReadiness}
-
-COACHING STYLE:
-${profile.lifeSatisfaction <= 4 ? '- Be extra supportive and empathetic\n- Focus on small wins\n- Emphasize self-compassion' : ''}
-${profile.lifeSatisfaction >= 8 ? '- Be energetic and challenging\n- Focus on optimization\n- Push for excellence' : ''}
-${profile.mindset === 'Lost/overwhelmed' ? '- Use calming language\n- Break things into smaller steps\n- Provide clear structure' : ''}
 
 INITIAL GREETING:
 ${personalizedGreeting}
 
 COACHING PRINCIPLES:
-1. Every response must reflect their profile
-2. Use their preferred support style (${profile.supportStyle})
-3. Match their energy level (${profile.energyLevel})
-4. Address their internal blocker (${profile.internalBlocker})
-5. Consider their decision style (${profile.decisionStyle})
-6. Respect their change readiness (${profile.changeReadiness})
-7. Give one clear action per message
-8. Use micro-commitments
-9. Invite depth when appropriate
-10. Offer accountability
+1. Be empathetic and supportive
+2. Focus on actionable steps
+3. Encourage positive change
+4. Provide clear guidance
+5. Maintain a hopeful outlook
 
-Your mission: Transform their state and momentum in under 30 seconds, while staying true to their profile.`;
+Your mission: Help the user achieve their goals while being supportive and practical.`;
 }
 
 export default App
