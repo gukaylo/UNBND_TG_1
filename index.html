@@ -2,13 +2,49 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/UNBND_TG_1/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <link rel="icon" type="image/svg+xml" href="/ai-coach-telegram-web/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, minimal-ui, shrink-to-fit=no" />
     <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <title>UnbndAICoach</title>
     <!-- Load Telegram Web App script first -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script type="module" crossorigin src="/UNBND_TG_1/assets/index-fMUeZjkG.js"></script>
+    <script>
+      // Initialize Telegram WebApp immediately
+      document.addEventListener('DOMContentLoaded', function() {
+        if (window.Telegram?.WebApp) {
+          window.Telegram.WebApp.ready();
+          window.Telegram.WebApp.expand();
+          
+          // Set theme colors
+          const theme = window.Telegram.WebApp.themeParams;
+          document.documentElement.style.setProperty('--tg-theme-bg-color', theme.bg_color || '#ffffff');
+          document.documentElement.style.setProperty('--tg-theme-text-color', theme.text_color || '#000000');
+          document.documentElement.style.setProperty('--tg-theme-hint-color', theme.hint_color || '#999999');
+          document.documentElement.style.setProperty('--tg-theme-link-color', theme.link_color || '#2481cc');
+          document.documentElement.style.setProperty('--tg-theme-button-color', theme.button_color || '#2481cc');
+          document.documentElement.style.setProperty('--tg-theme-button-text-color', theme.button_text_color || '#ffffff');
+          document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color || '#f1f1f1');
+          
+          // Add telegram-webapp class
+          document.body.classList.add('telegram-webapp');
+          
+          // Force redraw after a short delay
+          setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+            const bottomNav = document.querySelector('.bottom-nav');
+            if (bottomNav) {
+              bottomNav.style.display = 'none';
+              bottomNav.offsetHeight; // Force reflow
+              bottomNav.style.display = 'flex';
+            }
+          }, 100);
+        }
+      });
+    </script>
+    <script type="module" crossorigin src="/ai-coach-telegram-web/assets/index-B9qJktCF.js"></script>
   </head>
   <body>
     <div id="root"></div>
