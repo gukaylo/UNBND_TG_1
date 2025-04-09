@@ -2,49 +2,87 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/UNBND_TG_1/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, minimal-ui, shrink-to-fit=no" />
+    <link rel="icon" type="image/svg+xml" href="./vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="theme-color" content="#000000" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="msapplication-tap-highlight" content="no" />
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline' https://telegram.org https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:; connect-src 'self' https://api.openai.com;">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
     <title>UnbndAICoach</title>
-    <!-- Load Telegram Web App script first -->
+    
+    <!-- Load Telegram Web App script -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script>
       // Initialize Telegram WebApp immediately
       document.addEventListener('DOMContentLoaded', function() {
         if (window.Telegram?.WebApp) {
-          window.Telegram.WebApp.ready();
-          window.Telegram.WebApp.expand();
-          
-          // Set theme colors
-          const theme = window.Telegram.WebApp.themeParams;
-          document.documentElement.style.setProperty('--tg-theme-bg-color', theme.bg_color || '#ffffff');
-          document.documentElement.style.setProperty('--tg-theme-text-color', theme.text_color || '#000000');
-          document.documentElement.style.setProperty('--tg-theme-hint-color', theme.hint_color || '#999999');
-          document.documentElement.style.setProperty('--tg-theme-link-color', theme.link_color || '#2481cc');
-          document.documentElement.style.setProperty('--tg-theme-button-color', theme.button_color || '#2481cc');
-          document.documentElement.style.setProperty('--tg-theme-button-text-color', theme.button_text_color || '#ffffff');
-          document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color || '#f1f1f1');
-          
-          // Add telegram-webapp class
-          document.body.classList.add('telegram-webapp');
-          
-          // Force redraw after a short delay
-          setTimeout(() => {
-            window.dispatchEvent(new Event('resize'));
-            const bottomNav = document.querySelector('.bottom-nav');
-            if (bottomNav) {
-              bottomNav.style.display = 'none';
-              bottomNav.offsetHeight; // Force reflow
-              bottomNav.style.display = 'flex';
-            }
-          }, 100);
+          try {
+            const webapp = window.Telegram.WebApp;
+            
+            // Set background color first
+            const theme = webapp.themeParams;
+            const bgColor = theme.bg_color;
+            webapp.setBackgroundColor(bgColor);
+            
+            // Set theme variables
+            const root = document.documentElement;
+            root.style.setProperty('--tg-theme-bg-color', bgColor);
+            root.style.setProperty('--tg-theme-text-color', theme.text_color);
+            root.style.setProperty('--tg-theme-hint-color', theme.hint_color);
+            root.style.setProperty('--tg-theme-link-color', theme.link_color);
+            root.style.setProperty('--tg-theme-button-color', theme.button_color);
+            root.style.setProperty('--tg-theme-button-text-color', theme.button_text_color);
+            root.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color);
+            
+            // Set color scheme class
+            document.body.classList.add('telegram-webapp');
+            document.body.classList.add(`color-scheme-${webapp.colorScheme}`);
+            
+            // Set main background color
+            document.body.style.backgroundColor = bgColor;
+            root.style.backgroundColor = bgColor;
+            
+            // Initialize the Web App
+            webapp.ready();
+            webapp.expand();
+            
+            // Force immediate layout update
+            requestAnimationFrame(() => {
+              window.dispatchEvent(new Event('resize'));
+            });
+          } catch (error) {
+            console.error('Error initializing Telegram Web App:', error);
+          }
         }
       });
     </script>
-    <script type="module" crossorigin src="/UNBND_TG_1/assets/index-kQEBKBHw.js"></script>
+    
+    <style>
+      /* Critical CSS for initial load */
+      html, body {
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+      
+      #root {
+        height: 100%;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .telegram-webapp {
+        background: var(--tg-theme-bg-color) !important;
+      }
+    </style>
+    <script type="module" crossorigin src="/UNBND_TG_1/assets/index-Bd-7CoUk.js"></script>
   </head>
   <body>
     <div id="root"></div>

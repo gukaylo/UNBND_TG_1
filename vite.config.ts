@@ -14,6 +14,9 @@ export default defineConfig({
     rollupOptions: {
       output: {
         format: 'iife',
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
       },
     },
   },
@@ -21,5 +24,10 @@ export default defineConfig({
     port: 3000,
     host: true,
     strictPort: true,
+  },
+  resolve: {
+    alias: {
+      '@': '/src',
+    },
   },
 })
