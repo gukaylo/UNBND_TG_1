@@ -1,50 +1,72 @@
 // Initialize Telegram Web App
 export function initTelegramWebApp() {
-  if (window.Telegram?.WebApp) {
-    try {
-      // Initialize the Web App first
-      window.Telegram.WebApp.ready();
-      
-      // Get Telegram theme colors and parameters
-      const colorScheme = window.Telegram.WebApp.colorScheme;
-      const themeParams = window.Telegram.WebApp.themeParams;
-      
-      // Set the background color based on Telegram's theme
-      const bgColor = colorScheme === 'dark' ? '#1C1C1E' : '#ffffff';
-      window.Telegram.WebApp.setBackgroundColor(bgColor);
-      
-      // Update CSS variables based on Telegram theme
-      document.documentElement.style.setProperty('--tg-theme-bg-color', themeParams.bg_color || bgColor);
-      document.documentElement.style.setProperty('--tg-theme-text-color', themeParams.text_color || (colorScheme === 'dark' ? '#ffffff' : '#000000'));
-      document.documentElement.style.setProperty('--tg-theme-hint-color', themeParams.hint_color || '#8e8e93');
-      document.documentElement.style.setProperty('--tg-theme-link-color', themeParams.link_color || '#0A84FF');
-      document.documentElement.style.setProperty('--tg-theme-button-color', themeParams.button_color || '#0A84FF');
-      document.documentElement.style.setProperty('--tg-theme-button-text-color', themeParams.button_text_color || '#ffffff');
-      document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', themeParams.secondary_bg_color || (colorScheme === 'dark' ? '#2C2C2E' : '#f0f0f0'));
-      
-      // Expand the Web App to full height and enable closing confirmation
-      window.Telegram.WebApp.expand();
-      window.Telegram.WebApp.enableClosingConfirmation();
-      
-      // Add a class to the body to indicate Telegram Web App
-      document.body.classList.add('telegram-webapp');
-      
-      // Force a re-render to ensure proper layout
-      setTimeout(() => {
-        window.dispatchEvent(new Event('resize'));
-        // Force redraw of bottom navigation
-        const bottomNav = document.querySelector('.bottom-nav');
-        if (bottomNav) {
-          bottomNav.classList.add('force-redraw');
-          setTimeout(() => bottomNav.classList.remove('force-redraw'), 100);
-        }
-      }, 100);
-      
-      return true;
-    } catch (error) {
-      console.error('Error initializing Telegram Web App:', error);
-      return false;
-    }
+  if (!window.Telegram?.WebApp) {
+    console.error('Telegram WebApp is not available');
+    return false;
   }
-  return false;
+
+  try {
+    const webapp = window.Telegram.WebApp;
+    
+    // First, set the viewport color to match theme
+    const colorScheme = webapp.colorScheme || 'light';
+    const themeParams = webapp.themeParams || {};
+    
+    // Get background color from Telegram theme
+    const bgColor = themeParams.bg_color;
+    
+    // Set background color BEFORE any other initialization
+    webapp.setBackgroundColor(bgColor);
+    
+    // Set theme variables
+    const root = document.documentElement;
+    root.style.setProperty('--tg-theme-bg-color', bgColor);
+    root.style.setProperty('--tg-theme-text-color', themeParams.text_color);
+    root.style.setProperty('--tg-theme-hint-color', themeParams.hint_color);
+    root.style.setProperty('--tg-theme-link-color', themeParams.link_color);
+    root.style.setProperty('--tg-theme-button-color', themeParams.button_color);
+    root.style.setProperty('--tg-theme-button-text-color', themeParams.button_text_color);
+    root.style.setProperty('--tg-theme-secondary-bg-color', themeParams.secondary_bg_color);
+
+    // Set color scheme class
+    document.body.classList.add('telegram-webapp');
+    document.body.classList.add(`color-scheme-${colorScheme}`);
+    
+    // Set main background color
+    document.body.style.backgroundColor = bgColor;
+    document.documentElement.style.backgroundColor = bgColor;
+    
+    // Initialize the Web App
+    webapp.ready();
+    
+    // Expand to full height
+    webapp.expand();
+    
+    // Enable closing confirmation
+    webapp.enableClosingConfirmation();
+    
+    // Set up MainButton if needed
+    if (webapp.MainButton) {
+      webapp.MainButton.setParams({
+        text: 'Start Chat',
+        color: themeParams.button_color,
+        text_color: themeParams.button_text_color,
+      });
+    }
+    
+    // Set up BackButton if needed
+    if (webapp.BackButton) {
+      webapp.BackButton.hide();
+    }
+    
+    // Force immediate layout update
+    requestAnimationFrame(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    return true;
+  } catch (error) {
+    console.error('Error initializing Telegram Web App:', error);
+    return false;
+  }
 } 

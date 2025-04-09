@@ -22,6 +22,35 @@ declare global {
         setBackgroundColor: (color: string) => void
         backgroundColor: string
         headerColor: string
+        MainButton: {
+          text: string
+          color: string
+          textColor: string
+          isVisible: boolean
+          isActive: boolean
+          isProgressVisible: boolean
+          setText: (text: string) => void
+          onClick: (callback: () => void) => void
+          show: () => void
+          hide: () => void
+          enable: () => void
+          disable: () => void
+          showProgress: (leaveActive: boolean) => void
+          hideProgress: () => void
+          setParams: (params: {
+            text?: string
+            color?: string
+            text_color?: string
+            is_active?: boolean
+            is_visible?: boolean
+          }) => void
+        }
+        BackButton: {
+          isVisible: boolean
+          onClick: (callback: () => void) => void
+          show: () => void
+          hide: () => void
+        }
         themeParams: {
           bg_color: string
           text_color: string
@@ -31,6 +60,7 @@ declare global {
           button_text_color: string
           secondary_bg_color: string
         }
+        colorScheme: 'light' | 'dark'
       }
     }
   }
@@ -111,6 +141,74 @@ const baseTestQuestions: Question[] = [
   }
 ];
 
+// Add restart function
+export const restartApp = () => {
+  try {
+    // Clear any existing state
+    localStorage.clear();
+    
+    // Re-initialize Telegram WebApp
+    if (window.Telegram?.WebApp) {
+      // Reset WebApp state
+      window.Telegram.WebApp.ready();
+      window.Telegram.WebApp.expand();
+      window.Telegram.WebApp.enableClosingConfirmation();
+      
+      // Reset theme colors
+      const theme = window.Telegram.WebApp.themeParams;
+      const root = document.documentElement;
+      
+      root.style.setProperty('--tg-theme-bg-color', theme.bg_color || '#ffffff');
+      root.style.setProperty('--tg-theme-text-color', theme.text_color || '#000000');
+      root.style.setProperty('--tg-theme-hint-color', theme.hint_color || '#999999');
+      root.style.setProperty('--tg-theme-link-color', theme.link_color || '#2481cc');
+      root.style.setProperty('--tg-theme-button-color', theme.button_color || '#2481cc');
+      root.style.setProperty('--tg-theme-button-text-color', theme.button_text_color || '#ffffff');
+      root.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color || '#f1f1f1');
+      
+      // Force a redraw
+      window.dispatchEvent(new Event('resize'));
+      const bottomNav = document.querySelector('.bottom-nav');
+      if (bottomNav) {
+        bottomNav.classList.add('force-redraw');
+        setTimeout(() => bottomNav.classList.remove('force-redraw'), 100);
+      }
+      
+      // Reload the page to ensure a fresh start
+      window.location.reload();
+    }
+  } catch (error) {
+    console.error('Error restarting app:', error);
+  }
+};
+
+const createSystemPrompt = (answers: Record<string, any>) => {
+  const wellbeing = answers["How would you rate your current mental well-being?"] || "Unknown";
+  const priorityArea = answers["Which area of your life needs the most attention?"] || "Unknown";
+  const mindset = answers["How would you describe your current mindset?"] || "Unknown";
+  const energy = answers["What's your energy level like?"] || "Unknown";
+  const blocker = answers["What's your biggest internal blocker?"] || "Unknown";
+
+  return `You are an empathetic and professional AI Life Coach. Your role is to help users improve their lives through supportive conversation, practical advice, and gentle guidance.
+
+Current User Profile:
+- Mental Well-being: ${wellbeing}
+- Priority Area: ${priorityArea}
+- Current Mindset: ${mindset}
+- Energy Level: ${energy}
+- Main Blocker: ${blocker}
+
+INITIAL GREETING:
+I understand that you're currently feeling ${wellbeing.toLowerCase()}, and you'd like to focus on ${priorityArea.toLowerCase()}. I'm here to support you and help you overcome any challenges, especially regarding ${blocker.toLowerCase()}. How would you like to begin our conversation?
+
+Guidelines:
+1. Be empathetic and understanding
+2. Focus on practical, actionable advice
+3. Encourage self-reflection
+4. Maintain professional boundaries
+5. Prioritize user's well-being and safety`;
+};
+
 function App() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -136,36 +234,94 @@ function App() {
 
   // Initialize Telegram WebApp
   useEffect(() => {
-    try {
-      // Initialize Telegram WebApp
-      initTelegramWebApp();
-      
-      // Set up theme colors from Telegram
-      if (window.Telegram?.WebApp) {
-        const theme = window.Telegram.WebApp.themeParams;
-        const root = document.documentElement;
+    const initApp = async () => {
+      try {
+        // Initialize Telegram WebApp
+        const initialized = initTelegramWebApp();
         
-        // Update CSS variables with Telegram theme colors
-        root.style.setProperty('--tg-theme-bg-color', theme.bg_color || '#ffffff');
-        root.style.setProperty('--tg-theme-text-color', theme.text_color || '#000000');
-        root.style.setProperty('--tg-theme-hint-color', theme.hint_color || '#999999');
-        root.style.setProperty('--tg-theme-link-color', theme.link_color || '#2481cc');
-        root.style.setProperty('--tg-theme-button-color', theme.button_color || '#2481cc');
-        root.style.setProperty('--tg-theme-button-text-color', theme.button_text_color || '#ffffff');
-        root.style.setProperty('--tg-theme-secondary-bg-color', theme.secondary_bg_color || '#f1f1f1');
+        if (!initialized) {
+          console.error('Failed to initialize Telegram WebApp');
+          // Set fallback colors
+          document.documentElement.style.setProperty('--tg-theme-bg-color', '#ffffff');
+          document.documentElement.style.setProperty('--tg-theme-text-color', '#000000');
+          document.documentElement.style.setProperty('--tg-theme-hint-color', '#999999');
+          document.documentElement.style.setProperty('--tg-theme-link-color', '#2481cc');
+          document.documentElement.style.setProperty('--tg-theme-button-color', '#2481cc');
+          document.documentElement.style.setProperty('--tg-theme-button-text-color', '#ffffff');
+          document.documentElement.style.setProperty('--tg-theme-secondary-bg-color', '#f1f1f1');
+        }
         
-        // Basic Telegram WebApp setup
-        window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand();
-        window.Telegram.WebApp.enableClosingConfirmation();
-        
-        // Set background color
-        window.Telegram.WebApp.setBackgroundColor(theme.bg_color || '#ffffff');
+        // Force immediate layout update
+        requestAnimationFrame(() => {
+          window.dispatchEvent(new Event('resize'));
+        });
+      } catch (error) {
+        console.error('Error during app initialization:', error);
       }
-    } catch (error) {
-      console.error('Error initializing Telegram Web App:', error);
-    }
+    };
+
+    initApp();
+    
+    // Cleanup function
+    return () => {
+      document.body.classList.remove('telegram-webapp');
+    };
   }, []);
+
+  // Handle Telegram MainButton
+  useEffect(() => {
+    const mainButton = window.Telegram?.WebApp?.MainButton;
+    if (!mainButton) return;
+
+    if (currentStep === 'welcome') {
+      mainButton.setText('Start Assessment');
+      mainButton.onClick(() => {
+        setCurrentStep('assessment');
+        mainButton.hide();
+      });
+      mainButton.show();
+    } else {
+      mainButton.hide();
+    }
+
+    return () => {
+      mainButton.hide();
+    };
+  }, [currentStep]);
+
+  // Handle Telegram BackButton
+  useEffect(() => {
+    const backButton = window.Telegram?.WebApp?.BackButton;
+    if (!backButton) return;
+
+    if (currentStep === 'assessment' || currentStep === 'chat') {
+      backButton.onClick(() => {
+        setCurrentStep('welcome');
+        backButton.hide();
+      });
+      backButton.show();
+    } else {
+      backButton.hide();
+    }
+
+    return () => {
+      backButton.hide();
+    };
+  }, [currentStep]);
+
+  // Handle answer selection with MainButton
+  useEffect(() => {
+    const mainButton = window.Telegram?.WebApp?.MainButton;
+    if (!mainButton) return;
+
+    if (currentStep === 'assessment' && selectedAnswer !== null) {
+      mainButton.setText('Continue');
+      mainButton.onClick(() => handleAnswer(selectedAnswer));
+      mainButton.show();
+    } else if (currentStep === 'assessment') {
+      mainButton.hide();
+    }
+  }, [currentStep, selectedAnswer]);
 
   const handleSubmit = async (message: string) => {
     if (!message.trim() || isLoading) return;
@@ -336,7 +492,7 @@ function App() {
               {currentStep === 'welcome' && (
                 <div className="welcome-screen">
                   <h1>Welcome to AI Coach</h1>
-                  <p>Let's start your journey to better mental health</p>
+                  <p>Let's start by understanding where you are in your journey.</p>
                   <div className="welcome-buttons">
                     <button 
                       className="welcome-button" 
@@ -345,7 +501,7 @@ function App() {
                         setCurrentStep('assessment');
                       }}
                     >
-                      Take the base test
+                      Take Assessment
                     </button>
                     <button 
                       className="welcome-button" 
@@ -354,7 +510,7 @@ function App() {
                         handleStartChat();
                       }}
                     >
-                      Start chatting right away
+                      Start Chatting
                     </button>
                   </div>
                 </div>
@@ -500,65 +656,6 @@ function App() {
       </div>
     </ThemeProvider>
   )
-}
-
-function createSystemPrompt(answers: Record<string, any>) {
-  // Create a default profile with empty values
-  const profile = {
-    lifeSatisfaction: "unknown",
-    priorityArea: "unknown",
-    mindset: "unknown",
-    energyLevel: "unknown",
-    internalBlocker: "unknown"
-  };
-
-  // Update profile with any provided answers
-  if (Object.keys(answers).length > 0) {
-    Object.entries(answers).forEach(([question, answer]) => {
-      if (question.includes("mental well-being")) {
-        profile.lifeSatisfaction = answer;
-      } else if (question.includes("needs the most attention")) {
-        profile.priorityArea = answer;
-      } else if (question.includes("current mindset")) {
-        profile.mindset = answer;
-      } else if (question.includes("energy level")) {
-        profile.energyLevel = answer;
-      } else if (question.includes("internal blocker")) {
-        profile.internalBlocker = answer;
-      }
-    });
-  }
-
-  let personalizedGreeting = "Hi! I'm your AI Coach. I'm here to help you on your journey. ";
-
-  // Add context based on available information
-  if (profile.lifeSatisfaction !== "unknown") {
-    personalizedGreeting += `I see you're feeling ${profile.lifeSatisfaction.toLowerCase()}. `;
-  }
-  if (profile.priorityArea !== "unknown") {
-    personalizedGreeting += `Let's focus on improving your ${profile.priorityArea.toLowerCase()}. `;
-  }
-
-  return `You are an empathetic AI coach focused on helping people improve their lives.
-
-PERSONALIZATION PROFILE:
-- Life Satisfaction: ${profile.lifeSatisfaction}
-- Priority Area: ${profile.priorityArea}
-- Current Mindset: ${profile.mindset}
-- Energy Level: ${profile.energyLevel}
-- Internal Blocker: ${profile.internalBlocker}
-
-INITIAL GREETING:
-${personalizedGreeting}
-
-COACHING PRINCIPLES:
-1. Be empathetic and supportive
-2. Focus on actionable steps
-3. Encourage positive change
-4. Provide clear guidance
-5. Maintain a hopeful outlook
-
-Your mission: Help the user achieve their goals while being supportive and practical.`;
 }
 
 export default App
